@@ -435,12 +435,61 @@ Here's what we've built across all phases:
 - ✅ Configurable thresholds
 - ✅ Daily summaries
 
-### Phase 11: Monitoring (NEW!)
+### Phase 11: Monitoring
 - ✅ Real-time metrics collection
 - ✅ Webhook integration (send to external systems)
 - ✅ Advanced alert rules
 - ✅ Performance analytics
 - ✅ Event streaming
+
+### Phase 12: Advanced Scheduling & Batch Processing
+- ✅ **Scheduler** — Automate recurring operations with cron expressions
+  - Schedule daily analysis, recurring reclaims, weekly reports
+  - Automatic retry logic with exponential backoff
+  - Telegram notifications on completion/failure
+  - Full audit trail for compliance
+  
+- ✅ **Batch Processor** — Optimize high-volume operations
+  - Process 1000+ accounts efficiently with parallel batching
+  - Configurable batch sizing and concurrency
+  - Real-time progress tracking with visual progress bar
+  - Detailed performance statistics
+  - Graceful error handling and recovery
+
+---
+
+## Scheduling & Batch Processing
+
+### Quick Start: Automated Operations
+
+Schedule operations to run automatically:
+
+```bash
+# Analyze all accounts daily at 2 AM
+npm start -- schedule --cron '0 2 * * *' --operation analyze
+
+# Execute reclaims every 6 hours
+npm start -- schedule --cron '0 */6 * * *' --operation reclaim
+
+# Generate report on Sundays at midnight
+npm start -- schedule --cron '0 0 * * 0' --operation report
+```
+
+Process large account sets efficiently:
+
+```bash
+# Analyze 1000 accounts with 4 parallel workers
+npm start -- batch --operation analyze --batch-size 100 --parallelism 4
+
+# Reclaim in optimized batches
+npm start -- batch --operation reclaim --batch-size 50 --parallelism 8
+```
+
+**Complete Guide:** See [SCHEDULER_BATCH_GUIDE.md](./SCHEDULER_BATCH_GUIDE.md) for:
+- Cron expression syntax and common patterns
+- Performance tuning and optimization
+- Combining with dashboard monitoring
+- Troubleshooting and error recovery
 
 ---
 

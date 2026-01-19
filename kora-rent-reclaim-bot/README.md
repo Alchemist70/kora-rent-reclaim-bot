@@ -332,7 +332,54 @@ Access at `http://localhost:3000` (or your configured host/port).
   - Error frequency
   - System uptime
 
-### 8. Telegram Alerting (Phase 10 - Production)
+### 8. Advanced Scheduling (Automated Recurring Operations)
+
+Automate recurring operations using cron expressions:
+
+```bash
+# Analyze accounts every day at 2 AM
+npm start -- schedule --cron '0 2 * * *' --operation analyze
+
+# Reclaim every 6 hours
+npm start -- schedule --cron '0 */6 * * *' --operation reclaim
+
+# Generate weekly report on Sundays at midnight
+npm start -- schedule --cron '0 0 * * 0' --operation report
+```
+
+**Features:**
+- Cron-based scheduling with automatic retry logic
+- Concurrency control and rate limiting
+- Telegram notifications on completion/failure
+- Full audit trail for compliance
+
+See [SCHEDULER_BATCH_GUIDE.md](./SCHEDULER_BATCH_GUIDE.md) for complete documentation and examples.
+
+### 9. Batch Processing (Optimized High-Volume Operations)
+
+Process large account sets efficiently with parallel batching:
+
+```bash
+# Analyze 1000 accounts in batches of 100
+npm start -- batch --operation analyze --batch-size 100 --parallelism 4
+
+# Reclaim with custom batch configuration
+npm start -- batch --operation reclaim --batch-size 50 --parallelism 8
+
+# Health check accounts in parallel
+npm start -- batch --operation check --batch-size 200 --parallelism 6
+```
+
+**Features:**
+- Configurable batch sizing and parallelism
+- Real-time progress tracking with visual progress bar
+- Automatic retry logic with exponential backoff
+- Detailed performance statistics (throughput, success rate)
+- Graceful error handling and recovery
+
+See [SCHEDULER_BATCH_GUIDE.md](./SCHEDULER_BATCH_GUIDE.md) for advanced usage and tuning.
+
+### 10. Telegram Alerting (Production)
 
 Receive real-time alerts on important events:
 

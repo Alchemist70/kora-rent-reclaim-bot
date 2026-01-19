@@ -39,6 +39,8 @@ All markdown documentation is environment-agnostic and includes both dev & produ
 | **GETTING_STARTED.md** | 5-minute setup + full workflow + production checklist | New users |
 | **PRODUCTION_DEPLOYMENT.md** | Complete production runbook, systemd setup, monitoring | DevOps/SRE |
 | **TESTING_AND_REALTIME_OPS.md** | Testing procedures, dry-run guidelines, monitoring | QA/Operators |
+| **SCHEDULER_BATCH_GUIDE.md** | Advanced scheduling & batch processing guide | Operations/DevOps |
+| **SCHEDULER_BATCH_SUMMARY.md** | Implementation details and architecture | Developers |
 | **TELEGRAM_ALERTING_IMPLEMENTATION.md** | Alert system guide, API reference, troubleshooting | All users |
 | **DOCUMENTATION.md** | Index of all docs, quick reference guide | All users |
 | **FILE_MANIFEST.md** | List of all source code files with descriptions | Developers |
@@ -67,13 +69,15 @@ All TypeScript files include production safety by default (strict mode, error ha
 ### Core CLI & Configuration
 ```
 src/
-├── cli.ts                    Command-line interface (reclaim, analyze, index, dashboard, test-telegram)
+├── cli.ts                    Command-line interface (reclaim, analyze, index, dashboard, schedule, batch)
 ├── config.ts                 Configuration loader with env var support
 └── utils/
     ├── types.ts              TypeScript interfaces (all types)
     ├── logging.ts            Winston-based structured logging
     ├── solana.ts             Solana utilities (RPC, keypair, connection)
-    └── types.ts              Domain types
+    ├── scheduler.ts          Cron-based scheduling (NEW)
+    ├── batchProcessor.ts     Parallel batch processing (NEW)
+    └── auditLog.ts           Audit trail utilities
 ```
 
 ### Indexing & Analysis

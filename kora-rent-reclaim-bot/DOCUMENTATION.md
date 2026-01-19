@@ -30,6 +30,8 @@ Complete guide to the Kora Rent Reclaim Bot documentation. Start here to find wh
 
 ## Features & Monitoring
 
+- [SCHEDULER_BATCH_GUIDE.md](./SCHEDULER_BATCH_GUIDE.md) — **NEW:** Advanced scheduling and batch processing (cron automation, high-volume optimization)
+- [SCHEDULER_BATCH_SUMMARY.md](./SCHEDULER_BATCH_SUMMARY.md) — Technical implementation details
 - [TELEGRAM_ALERTING_IMPLEMENTATION.md](./TELEGRAM_ALERTING_IMPLEMENTATION.md) — Telegram alerts setup and API
 - [docs/DASHBOARD.md](./docs/DASHBOARD.md) — Dashboard features and usage
 - [docs/MONITORING.md](./docs/MONITORING.md) — Monitoring strategies and metrics
@@ -58,6 +60,8 @@ See [PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md#step-7-monitoring--ale
 ├── GETTING_STARTED.md                     Setup guide (dev + prod)
 ├── PRODUCTION_DEPLOYMENT.md               Production runbook
 ├── TESTING_AND_REALTIME_OPS.md            Testing procedures
+├── SCHEDULER_BATCH_GUIDE.md               Advanced scheduling & batch processing (NEW)
+├── SCHEDULER_BATCH_SUMMARY.md             Implementation technical details (NEW)
 ├── TELEGRAM_ALERTING_IMPLEMENTATION.md    Alert system guide
 ├── FILE_MANIFEST.md                       List of all source files
 ├── config.dev.json                        Development config template
@@ -84,7 +88,7 @@ docs/
 ### Source Code (`src/`)
 ```
 src/
-├── cli.ts                                 Command-line interface
+├── cli.ts                                 Command-line interface (+ schedule, batch commands)
 ├── config.ts                              Configuration loader
 ├── dashboard/dashboardServer.ts           Web dashboard server
 ├── indexer/sponsorshipIndexer.ts          Account indexing
@@ -95,7 +99,10 @@ src/
 ├── alerting/telegramAlertService.ts       Telegram alerts
 ├── utils/types.ts                         TypeScript types
 ├── utils/logging.ts                       Logging setup
-└── utils/solana.ts                        Solana utilities
+├── utils/solana.ts                        Solana utilities
+├── utils/scheduler.ts                     Cron scheduling (NEW)
+├── utils/batchProcessor.ts                Parallel batch processing (NEW)
+└── utils/auditLog.ts                      Audit trail
 ```
 
 ### Data Directory (Created at Runtime)
