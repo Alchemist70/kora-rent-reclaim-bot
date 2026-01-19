@@ -618,9 +618,9 @@ For issues, questions, or suggestions:
 - [ ] Hardware wallet support
 - [ ] Multi-signature treasury support
 - [ ] Token account reclaim (with token burning)
-- [ ] Advanced scheduling/automation
+- [x] Advanced scheduling/automation
 - [ ] GraphQL API integration
-- [ ] Batch processing improvements
+- [x] Batch processing improvements
 
 ## References
 
