@@ -323,14 +323,26 @@ export class DashboardServer {
     const events: ReclaimEvent[] = [];
 
     for (const entry of auditLog) {
-      if (entry.action === "RECLAIM_CONFIRMED" || entry.action === "RECLAIM_FAILED") {
-        events.push({
-          timestamp: entry.unix_timestamp || Date.now(),
-          account: entry.account?.substring(0, 8) + "..." || "unknown",
-          amount: entry.details?.lamports || 0,
-          status: entry.action === "RECLAIM_CONFIRMED" ? "success" : "failed",
-        });
+      let status = "";
+      
+      if (entry.action === "INDEXED") {
+        status = "indexed";
+      } else if (entry.action === "ANALYZED") {
+        status = "analyzed";
+      } else if (entry.action === "RECLAIM_CONFIRMED") {
+        status = "reclaimed";
+      } else if (entry.action === "RECLAIM_FAILED") {
+        status = "failed";
+      } else {
+        continue; // Skip unknown actions
       }
+
+      events.push({
+        timestamp: entry.unix_timestamp || Date.now(),
+        account: entry.account?.substring(0, 8) + "..." || "unknown",
+        amount: entry.details?.lamports || 0,
+        status: status,
+      });
     }
 
     return events.sort((a, b) => a.timestamp - b.timestamp);

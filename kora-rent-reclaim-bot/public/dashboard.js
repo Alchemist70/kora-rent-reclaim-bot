@@ -147,23 +147,29 @@ function updateTimeline(events) {
         return;
     }
 
-    // Sort by timestamp descending
-    events.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    // Sort by timestamp descending (convert seconds to milliseconds)
+    events.sort((a, b) => (b.timestamp * 1000) - (a.timestamp * 1000));
 
     // Take last 30 days of events for chart
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const chartEvents = events.filter(e => new Date(e.timestamp) >= thirtyDaysAgo);
+    const chartEvents = events.filter(e => new Date(e.timestamp * 1000) >= thirtyDaysAgo);
 
-    // Group by date
-    const byDate = {};
+    // Group by date and action type
+    const byDateAndType = {};
     chartEvents.forEach(event => {
-        const date = new Date(event.timestamp).toLocaleDateString();
-        byDate[date] = (byDate[date] || 0) + (event.status === 'reclaimed' || event.type === 'reclaimed' ? 1 : 0);
+        const date = new Date(event.timestamp * 1000).toLocaleDateString();
+        if (!byDateAndType[date]) {
+            byDateAndType[date] = { indexed: 0, analyzed: 0, reclaimed: 0, failed: 0 };
+        }
+        byDateAndType[date][event.status] = (byDateAndType[date][event.status] || 0) + 1;
     });
 
-    const dates = Object.keys(byDate).sort();
-    const counts = dates.map(d => byDate[d]);
+    const dates = Object.keys(byDateAndType).sort();
+    const indexedCounts = dates.map(d => byDateAndType[d].indexed || 0);
+    const analyzedCounts = dates.map(d => byDateAndType[d].analyzed || 0);
+    const reclaimedCounts = dates.map(d => byDateAndType[d].reclaimed || 0);
+    const failedCounts = dates.map(d => byDateAndType[d].failed || 0);
 
     const canvas = document.getElementById('timeline-chart');
     if (!canvas) {
@@ -179,19 +185,52 @@ function updateTimeline(events) {
         type: 'line',
         data: {
             labels: dates,
-            datasets: [{
-                label: 'Reclaimed Accounts',
-                data: counts,
-                borderColor: '#667eea',
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 4,
-                pointBackgroundColor: '#667eea',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2
-            }]
+            datasets: [
+                {
+                    label: 'Indexed',
+                    data: indexedCounts,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#6366f1'
+                },
+                {
+                    label: 'Analyzed',
+                    data: analyzedCounts,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#f59e0b'
+                },
+                {
+                    label: 'Reclaimed',
+                    data: reclaimedCounts,
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#10b981'
+                },
+                {
+                    label: 'Failed',
+                    data: failedCounts,
+                    borderColor: '#ef4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#ef4444'
+                }
+            ]
         },
         options: {
             responsive: true,
