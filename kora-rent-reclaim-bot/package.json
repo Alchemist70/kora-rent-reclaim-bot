@@ -1,0 +1,42 @@
+{
+  "name": "kora-rent-reclaim-bot",
+  "version": "1.0.0",
+  "description": "Automated rent-reclaim bot for Kora operators on Solana",
+  "main": "dist/cli.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/cli.ts",
+    "start": "node dist/cli.js",
+    "clean": "rm -rf dist",
+    "lint": "eslint src --ext .ts"
+  },
+  "keywords": [
+    "solana",
+    "kora",
+    "rent-reclaim",
+    "automation",
+    "blockchain"
+  ],
+  "author": "Kora Operators",
+  "license": "MIT",
+  "dependencies": {
+    "@solana/spl-token": "^0.3.10",
+    "@solana/web3.js": "^1.90.0",
+    "axios": "^1.6.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "winston": "^3.11.0",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.10.0",
+    "@types/yargs": "^17.0.35",
+    "@typescript-eslint/eslint-plugin": "^6.13.1",
+    "@typescript-eslint/parser": "^6.13.1",
+    "eslint": "^8.54.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.3"
+  }
+}

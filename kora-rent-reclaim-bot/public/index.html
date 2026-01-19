@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kora Rent Reclaim - Operator Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🤖 Kora Rent Reclaim Dashboard</h1>
+            <p class="subtitle">Real-time monitoring of sponsored account reclamation</p>
+        </header>
+
+        <!-- Metrics Summary -->
+        <section class="metrics-section">
+            <div class="metric-card">
+                <div class="metric-label">Total Accounts Tracked</div>
+                <div class="metric-value" id="total-tracked">--</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Total Rent Locked</div>
+                <div class="metric-value" id="total-locked">-- SOL</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Total Reclaimed</div>
+                <div class="metric-value metric-success" id="total-reclaimed">-- SOL</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Still Idle</div>
+                <div class="metric-value metric-warning" id="still-idle">-- SOL</div>
+            </div>
+        </section>
+
+        <!-- Status Cards -->
+        <section class="status-section">
+            <div class="status-card status-reclaimable">
+                <div class="status-number" id="count-reclaimable">--</div>
+                <div class="status-label">Reclaimable</div>
+            </div>
+            <div class="status-card status-reclaimed">
+                <div class="status-number" id="count-reclaimed">--</div>
+                <div class="status-label">Reclaimed</div>
+            </div>
+            <div class="status-card status-skipped">
+                <div class="status-number" id="count-skipped">--</div>
+                <div class="status-label">Skipped</div>
+            </div>
+            <div class="status-card status-failed">
+                <div class="status-number" id="count-failed">--</div>
+                <div class="status-label">Failed</div>
+            </div>
+        </section>
+
+        <!-- Tabs -->
+        <section class="tabs-section">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="timeline">Timeline</button>
+                <button class="tab-button" data-tab="accounts">Accounts</button>
+                <button class="tab-button" data-tab="warnings">Warnings</button>
+            </div>
+
+            <!-- Timeline Tab -->
+            <div id="timeline" class="tab-content active">
+                <div class="chart-container">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Accounts Tab -->
+            <div id="accounts" class="tab-content">
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search account...">
+                </div>
+                <div class="table-container">
+                    <table id="accountsTable" class="accounts-table">
+                        <thead>
+                            <tr>
+                                <th>Account</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th>Rent (SOL)</th>
+                                <th>Reason</th>
+                                <th>Tx Signature</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accountsTableBody">
+                            <tr><td colspan="6">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Warnings Tab -->
+            <div id="warnings" class="tab-content">
+                <div id="warningsList" class="warnings-list">
+                    <p>Loading warnings...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Audit Summary -->
+        <section class="audit-section">
+            <h3>Audit Log Summary</h3>
+            <div id="auditSummary" class="audit-summary">
+                Loading...
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Last updated: <span id="lastUpdated">--</span></p>
+            <p>Dashboard is read-only. For transactions, use CLI.</p>
+        </footer>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>
