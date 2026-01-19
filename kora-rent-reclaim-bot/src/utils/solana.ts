@@ -13,16 +13,35 @@ import {
 } from "@solana/web3.js";
 import fs from "fs";
 import path from "path";
-import { logDebug, logError, logWarn } from "./logging.js";
+import { logDebug, logError, logWarn, logInfo } from "./logging.js";
+import { RPCFailover, parseRPCEndpoints } from "./rpcFailover.js";
 
 /**
- * Get or create a Solana connection with retry logic
+ * Get or create a Solana connection with retry logic and failover support
+ * Supports multiple RPC endpoints separated by pipe (|)
  * Retries on network failures to ensure reliability
  */
 export async function getSolanaConnection(
   rpcUrl: string,
   maxRetries: number = 3,
   retryDelayMs: number = 1000
+): Promise<Connection> {
+  // Check if multiple RPC endpoints provided (pipe-separated)
+  if (rpcUrl.includes("|")) {
+    return getSolanaConnectionWithFailover(rpcUrl, maxRetries, retryDelayMs);
+  }
+
+  // Single RPC endpoint - use existing logic
+  return getSolanaConnectionSingle(rpcUrl, maxRetries, retryDelayMs);
+}
+
+/**
+ * Connect to Solana using a single RPC endpoint with retry logic
+ */
+async function getSolanaConnectionSingle(
+  rpcUrl: string,
+  maxRetries: number,
+  retryDelayMs: number
 ): Promise<Connection> {
   let lastError: Error | null = null;
 
@@ -35,7 +54,7 @@ export async function getSolanaConnection(
       // Test the connection by getting slot
       await connection.getSlot();
       
-      logDebug("✓ Connected to Solana successfully");
+      logInfo("✓ Connected to Solana successfully");
       return connection;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
@@ -52,6 +71,59 @@ export async function getSolanaConnection(
   }
 
   const errorMsg = `Failed to connect to Solana RPC after ${maxRetries} attempts: ${lastError?.message}`;
+  logError("getSolanaConnection", errorMsg);
+  throw new Error(errorMsg);
+}
+
+/**
+ * Connect to Solana using failover RPC endpoints
+ * Automatically switches to secondary RPC if primary fails
+ */
+async function getSolanaConnectionWithFailover(
+  rpcString: string,
+  maxRetries: number,
+  retryDelayMs: number
+): Promise<Connection> {
+  const endpoints = parseRPCEndpoints(rpcString);
+  
+  if (endpoints.length === 0) {
+    throw new Error("No valid RPC endpoints provided");
+  }
+
+  logInfo(`Using RPC failover with ${endpoints.length} endpoints`);
+
+  const failover = new RPCFailover(endpoints);
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      logDebug(`Failover attempt ${attempt + 1}/${maxRetries}`);
+      const { connection, endpoint } = await failover.getNextWorkingEndpoint(
+        retryDelayMs
+      );
+      
+      logInfo(`Successfully connected to ${endpoint.name}`);
+      return connection;
+    } catch (error) {
+      logWarn(
+        `Failover attempt ${attempt + 1} failed: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+
+      if (attempt < maxRetries - 1) {
+        const delay = retryDelayMs * Math.pow(2, attempt);
+        logDebug(`Retrying failover in ${delay}ms...`);
+        await sleep(delay);
+      }
+    }
+  }
+
+  const status = failover.getStatus();
+  const statusStr = status
+    .map((s) => `${s.name}: ${s.failures} failures`)
+    .join(", ");
+
+  const errorMsg = `Failed to connect to any RPC endpoint after ${maxRetries} attempts. Status: ${statusStr}`;
   logError("getSolanaConnection", errorMsg);
   throw new Error(errorMsg);
 }

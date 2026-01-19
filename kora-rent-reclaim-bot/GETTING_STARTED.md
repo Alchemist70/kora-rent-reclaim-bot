@@ -77,6 +77,28 @@ Three config templates are provided:
 2. **config.prod.example.json** — Production template (mainnet, uses env vars, live mode)
 3. **config-telegram-example.json** — Example with Telegram pre-configured
 
+### Environment Variables
+
+All environment variables are in `.env` for development and production.
+
+**For Development:**
+Your `.env` file is already created with working defaults:
+```bash
+cat .env | head -10
+# SOLANA_RPC_URL=https://api.devnet.solana.com
+# KEYPAIR_PATH=./keypair.json
+# TREASURY_ADDRESS=11111111111111111111111111111111
+```
+
+Just run commands directly:
+```bash
+npm start -- index --import accounts-to-track.json
+npm start -- analyze
+```
+
+**For Production:**
+See [ENV_SETUP.md](./ENV_SETUP.md#production-setup) for complete guide.
+
 ### Environment Variables (Production Only)
 
 Never hardcode secrets. Create `.env` file:
