@@ -541,4 +541,4 @@ node dist/cli.js reclaim --config config.json
 
 ---
 
-**Last Updated:** 2026-01-19 | **Maintained by:** Kora Team
+
