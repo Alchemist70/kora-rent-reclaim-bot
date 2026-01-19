@@ -34,6 +34,51 @@ export function loadConfig(configPath: string): BotConfig {
       );
     }
 
+    // Load .env if present (populate process.env for substitutions)
+    try {
+      const envPath = path.resolve('.env');
+      if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        envContent.split(/\r?\n/).forEach((line) => {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#')) return;
+          const idx = trimmed.indexOf('=');
+          if (idx === -1) return;
+          const key = trimmed.slice(0, idx).trim();
+          const val = trimmed.slice(idx + 1).trim();
+          if (!(key in process.env)) {
+            // remove optional surrounding quotes
+            process.env[key] = val.replace(/^"|"$/g, '').replace(/^'|'$/g, '');
+          }
+        });
+      }
+    } catch (e) {
+      // non-fatal
+    }
+
+    // Replace ${ENV_VAR} placeholders in rawConfig using process.env
+    const replacePlaceholders = (obj: any): any => {
+      if (obj === null || obj === undefined) return obj;
+      if (typeof obj === 'string') {
+        return obj.replace(/\$\{([A-Z0-9_]+)\}/gi, (_m: string, name: string) => {
+          return process.env[name] ?? '';
+        });
+      }
+      if (Array.isArray(obj)) {
+        return obj.map((v) => replacePlaceholders(v));
+      }
+      if (typeof obj === 'object') {
+        const out: any = {};
+        for (const [k, v] of Object.entries(obj)) {
+          out[k] = replacePlaceholders(v);
+        }
+        return out;
+      }
+      return obj;
+    };
+
+    rawConfig = replacePlaceholders(rawConfig);
+
     // Validate required fields
     const requiredFields = [
       "rpcUrl",

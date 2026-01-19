@@ -63,6 +63,9 @@ export class TelegramAlertService {
     private httpClient: AxiosInstance;
     private config: TelegramConfig;
     private apiUrl: string;
+    private updateOffset: number = 0;
+    private pollingActive: boolean = false;
+    private pollingInterval: NodeJS.Timeout | null = null;
 
     /**
      * Initialize Telegram alert service
@@ -337,23 +340,222 @@ export class TelegramAlertService {
     }
 
     /**
+     * Start polling for incoming Telegram commands
+     */
+    startPolling(): void {
+        if (this.pollingActive) {
+            logger.warn('Telegram polling already active');
+            return;
+        }
+
+        if (!this.isEnabled()) {
+            logger.error('Cannot start polling: Telegram config incomplete');
+            return;
+        }
+
+        this.pollingActive = true;
+        logger.info('🎯 Starting Telegram command polling');
+
+        // Run first poll immediately
+        this.pollUpdates().catch(error => {
+            logger.error('First poll error', {
+                error: error instanceof Error ? error.message : String(error)
+            });
+        });
+
+        // Poll for updates every 3 seconds
+        this.pollingInterval = setInterval(() => {
+            this.pollUpdates().catch(error => {
+                logger.error('Poll error', {
+                    error: error instanceof Error ? error.message : String(error)
+                });
+            });
+        }, 3000);
+    }
+
+    /**
+     * Stop polling for incoming commands
+     */
+    stopPolling(): void {
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
+        this.pollingActive = false;
+        logger.info('Stopped Telegram command polling');
+    }
+
+    /**
+     * Poll for updates from Telegram
+     */
+    private async pollUpdates(): Promise<void> {
+        try {
+            const response = await this.httpClient.post('/getUpdates', {
+                offset: this.updateOffset,
+                timeout: 25,
+                allowed_updates: ['message']
+            });
+
+            if (!response.data?.ok) {
+                logger.error('❌ getUpdates failed', {
+                    code: response.data?.error_code,
+                    desc: response.data?.description
+                });
+                return;
+            }
+
+            const updates = response.data?.result || [];
+            
+            if (updates.length > 0) {
+                logger.info(`📨 Got ${updates.length} update(s)`);
+            }
+            
+            for (const update of updates) {
+                this.updateOffset = update.update_id + 1;
+                if (update.message) {
+                    logger.info('📩 Telegram message', {
+                        from: update.message.from?.username,
+                        text: update.message.text?.substring(0, 30)
+                    });
+                    await this.handleIncomingMessage(update.message);
+                }
+            }
+        } catch (error) {
+            if (error instanceof Error) {
+                if (error.message.includes('timeout')) return;
+                logger.warn('⚠️ Poll error', { error: error.message });
+            }
+        }
+    }
+
+    /**
+     * Handle incoming Telegram messages
+     */
+    private async handleIncomingMessage(message: any): Promise<void> {
+        const chatId = message.chat?.id;
+        const text = message.text?.trim() || '';
+        const textLower = text.toLowerCase();
+
+        if (!chatId) {
+            logger.warn('Message without chatId');
+            return;
+        }
+
+        // Normalize the command portion: remove any parameters and bot username suffix
+        const firstToken = (textLower.split(' ')[0] || '');
+        const command = firstToken.split('@')[0];
+
+        logger.info('🔔 Command received', { raw: text, command });
+
+        // Handle /start
+        if (command === '/start') {
+            await this.respondToCommand(
+                chatId,
+                '<b>👋 Welcome to Solana Rent Reclaim Bot!</b>\n\n' +
+                'This bot sends alerts about rent reclaim operations.\n\n' +
+                '<b>Available commands:</b>\n' +
+                '/start - Show this message\n' +
+                '/testconnection - Test bot connectivity\n' +
+                '/status - Get current bot status'
+            );
+            return;
+        }
+
+        // Handle /testconnection
+        if (command === '/testconnection') {
+            await this.respondToCommand(
+                chatId,
+                '<b>✅ Solana Rent Reclaim Bot is connected!</b>\n\n' +
+                'Status: <b>Online</b>\n' +
+                'Receiving alerts: Yes'
+            );
+            return;
+        }
+
+        // Handle /status
+        if (command === '/status') {
+            await this.respondToCommand(
+                chatId,
+                '<b>🔄 Solana Rent Reclaim Bot Status</b>\n\n' +
+                'Status: <b>Online</b>\n' +
+                'Connected: <b>Yes</b>\n' +
+                'Alerts: <b>Enabled</b>\n\n' +
+                '<b>Notifications for:</b>\n' +
+                '• Rent reclaim events\n' +
+                '• Idle rent detection\n' +
+                '• System errors'
+            );
+            return;
+        }
+
+        // Unknown command (still starts with /)
+        if (command.startsWith('/')) {
+            await this.respondToCommand(
+                chatId,
+                '❓ Unknown command.\n\nType /start to see available commands.'
+            );
+        }
+    }
+
+    /**
+     * Send command response to user
+     */
+    private async respondToCommand(chatId: string | number, text: string): Promise<void> {
+        try {
+            const response = await this.httpClient.post('/sendMessage', {
+                chat_id: chatId,
+                text,
+                parse_mode: 'HTML'
+            });
+            
+            if (response.data?.ok) {
+                logger.info('✅ Response sent', { chatId });
+            } else {
+                logger.error('❌ Send failed', {
+                    code: response.data?.error_code,
+                    desc: response.data?.description
+                });
+            }
+        } catch (error) {
+            logger.error('❌ Send error', {
+                chatId,
+                error: error instanceof Error ? error.message : String(error)
+            });
+        }
+    }
+
+    /**
      * Test connection to Telegram API
      */
     async testConnection(): Promise<boolean> {
         if (!this.isEnabled()) {
+            logger.error('❌ Telegram not enabled or config incomplete');
             return false;
         }
 
         try {
+            logger.info('🔍 Testing Telegram API connection...');
+            
             const response = await this.httpClient.post('/sendMessage', {
                 chat_id: this.config.chatId,
                 text: '✅ Solana Rent Reclaim Bot connected to Telegram'
             });
 
-            logger.info('Telegram connection test successful');
-            return response.status === 200;
+            if (response.data?.ok) {
+                logger.info('✅ Telegram API connection successful');
+                logger.info('🎯 Starting command polling...');
+                this.startPolling();
+                logger.info('✅ Bot ready to receive commands');
+                return true;
+            }
+            
+            logger.error('❌ Telegram API error', {
+                code: response.data?.error_code,
+                description: response.data?.description
+            });
+            return false;
         } catch (error) {
-            logger.error('Telegram connection test failed', {
+            logger.error('❌ Connection test failed', {
                 error: error instanceof Error ? error.message : String(error)
             });
             return false;

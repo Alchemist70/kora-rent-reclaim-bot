@@ -69,7 +69,28 @@ Edit `config.json`:
 npx ts-node src/cli.ts test-telegram --config config.json
 ```
 
-You should receive a confirmation message in Telegram.
+You should receive a confirmation message in Telegram. The bot will also start polling for incoming commands.
+
+### 5. Bot Commands
+
+Once the bot is running and receiving commands, you can interact with it via Telegram:
+
+- **`/start`** — Shows welcome message and available commands
+- **`/testconnection`** — Verifies bot connectivity and status
+- **`/status`** — Shows current bot status (online/offline, alerts enabled/disabled)
+
+The bot automatically responds to any `/command` you send. If you send an unknown command, it will suggest using `/start` to see available options.
+
+### 6. How It Works
+
+The bot operates in **polling mode**:
+
+1. When you start the reclaim operation, the bot connects to Telegram API
+2. Every 3 seconds, it checks for new messages and commands from you
+3. When it detects a command (like `/start` or `/testconnection`), it responds immediately
+4. Meanwhile, it continues sending alerts about reclaim operations
+
+This approach is reliable and works behind firewalls without needing a public webhook endpoint.
 
 ## Production Alert Routing
 
@@ -78,6 +99,7 @@ In production, you'll likely need alerts routed to multiple people/channels and 
 ### Multi-Channel Setup
 
 Create separate bots for different severity levels:
+
 
 ```json
 {

@@ -33,6 +33,20 @@ import { processBatch, getBatchStats } from "./utils/batchProcessor.js";
  * Main CLI entry point
  */
 async function main() {
+  // Normalize simple command aliases so users can run 'reclaim-rent' as alias for 'reclaim'
+  try {
+    const aliasMap: Record<string, string> = {
+      'reclaim-rent': 'reclaim'
+    };
+    for (let i = 2; i < process.argv.length; i++) {
+      const arg = process.argv[i];
+      if (aliasMap[arg]) {
+        process.argv[i] = aliasMap[arg];
+      }
+    }
+  } catch (e) {
+    // non-fatal
+  }
   yargs(hideBin(process.argv))
     .command(
       "init",
