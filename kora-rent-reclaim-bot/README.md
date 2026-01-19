@@ -379,19 +379,25 @@ npm start -- batch --operation check --batch-size 200 --parallelism 6
 
 See [SCHEDULER_BATCH_GUIDE.md](./SCHEDULER_BATCH_GUIDE.md) for advanced usage and tuning.
 
-### 10. Telegram Alerting (Production)
+### 10. Telegram Alerting & Bot Commands
 
-Receive real-time alerts on important events:
+Receive real-time alerts on important events and respond to bot commands:
 
+#### Setup
 1. Create a Telegram bot via @BotFather
 2. Get your chat ID
-3. Update `config.json`:
+3. Set environment variables in `.env`:
+   ```bash
+   TELEGRAM_BOT_TOKEN=your-token
+   TELEGRAM_CHAT_ID=your-chat-id
+   ```
+4. Update `config.json` with placeholders:
    ```json
    {
      "telegram": {
        "enabled": true,
-       "botToken": "YOUR_BOT_TOKEN",
-       "chatId": "YOUR_CHAT_ID",
+       "botToken": "${TELEGRAM_BOT_TOKEN}",
+       "chatId": "${TELEGRAM_CHAT_ID}",
        "alerts": {
          "reclaimThreshold": 0.1,
          "idleThreshold": 0.5
@@ -399,6 +405,22 @@ Receive real-time alerts on important events:
      }
    }
    ```
+
+#### Start Bot as Background Responder (Recommended for Production)
+```bash
+npm start -- start-bot --config config.json
+```
+The bot will listen for Telegram commands: `/start`, `/testconnection`, `/status`
+
+#### Test Telegram Connection
+```bash
+npm start -- test-telegram --config config.json
+```
+
+#### Available Telegram Commands
+- `/start` — Show welcome message and available commands
+- `/testconnection` — Verify bot is connected and operational
+- `/status` — Get current bot status
 
 Alerts are automatically sent on:
 - ✅ Successful reclaims

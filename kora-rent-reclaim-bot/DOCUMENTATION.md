@@ -186,6 +186,7 @@ npm start -- analyze           # Analyze accounts
 npm start -- reclaim           # Execute reclaim
 npm start -- report            # View audit log
 npm start -- dashboard         # Start web dashboard
+npm start -- start-bot         # Start Telegram bot responder
 npm start -- test-telegram     # Test Telegram alerts
 ```
 
