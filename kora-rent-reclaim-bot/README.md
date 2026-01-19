@@ -615,11 +615,11 @@ For issues, questions, or suggestions:
 - [x] Phase 9: Operator Dashboard (real-time web UI)
 - [x] Phase 10: Telegram Alerting (real-time notifications)
 - [x] Phase 11: Advanced Monitoring & Metrics (enterprise-grade monitoring)
-- [ ] Hardware wallet support
-- [ ] Multi-signature treasury support
+- [ ] Hardware wallet support     # Later Implementation
+- [ ] Multi-signature treasury support     # Later Implementation
 - [ ] Token account reclaim (with token burning)
 - [x] Advanced scheduling/automation
-- [ ] GraphQL API integration
+- [ ] GraphQL API integration     # Later Implementation
 - [x] Batch processing improvements
 
 ## References
