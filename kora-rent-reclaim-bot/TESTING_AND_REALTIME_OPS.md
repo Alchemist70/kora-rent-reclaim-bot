@@ -1,10 +1,18 @@
 # Testing & Real-Time Operations Guide
 
-Note: This document is a practical playbook — written by the engineers who run the system daily. It focuses on reproducible steps and what to watch for in real time.
-
-**System Status**: ✅ Dashboard Running at http://localhost:3000  
+**Latest Update**: January 19, 2026  
+**System Status**: ✅ Production-Ready | Dashboard at http://localhost:3000  
 **Architecture**: Multi-layer validation with real-time monitoring  
-**Safety Level**: Enterprise-grade with mandatory dry-run testing
+**Safety Level**: Enterprise-grade with mandatory dry-run testing  
+
+---
+
+## Quick Navigation
+
+- **New to the bot?** Start with [GETTING_STARTED.md](./GETTING_STARTED.md)
+- **First deploy?** Follow [PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md)
+- **Local development?** Use [config.dev.json](./config.dev.json)
+- **Production setup?** Use [config.prod.example.json](./config.prod.example.json)
 
 ---
 
@@ -13,16 +21,46 @@ Note: This document is a practical playbook — written by the engineers who run
 The Solana Kora Rent Reclaim Bot uses a **3-tier testing approach** before any live operations:
 
 ```
-Test Environment (devnet)
+Test Environment (devnet/testnet)  ← Use config.dev.json or testnet config
     ↓
-Validation Checks
+Validation Checks (Safety engine)
     ↓
-Dry-Run Simulation 
+Dry-Run Simulation (dryRun: true)
     ↓
-Live Execution with Real-Time Monitoring
+Live Execution (dryRun: false)  ← Production mode
+    ↓
+Real-Time Monitoring (Dashboard + Telegram)
 ```
 
 Every operation is logged, monitored, and reversible (when possible).
+
+---
+
+## Environment Configuration
+
+### Development Mode
+Use `config.dev.json`:
+- RPC: Public devnet endpoint
+- Dry-run: ENABLED (no transactions)
+- Logging: Debug (verbose)
+- Dashboard: localhost:3000
+
+```bash
+cp config.dev.json config.json
+npm start -- analyze --config config.json
+```
+
+### Production Mode
+Use `config.prod.example.json` with environment variables:
+- RPC: Private endpoint (Helius, Triton, etc.)
+- Dry-run: DISABLED (real transactions)
+- Logging: Info (less verbose)
+- Dashboard: Secured behind reverse proxy
+
+```bash
+source .env  # Load your secrets
+npm start -- reclaim --config config.prod.json
+```
 
 ---
 

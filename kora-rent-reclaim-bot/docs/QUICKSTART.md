@@ -35,14 +35,41 @@ npm run build
 
 Create and edit your config file:
 
+**Development (Recommended for first-time):**
+```bash
+cp ../config.dev.json config.json
+```
+
+**Or Production Template:**
+```bash
+cp ../config.prod.example.json config.json
+# Set environment variables before running
+```
+
+### Key Config Values
+
 ```json
 {
   "keypairPath": "./path/to/your/keypair.json",
   "treasuryAddress": "YOUR_TREASURY_PUBKEY_HERE",
   "rpcUrl": "https://api.devnet.solana.com",
   "cluster": "devnet",
-  "dryRun": true
+  "dryRun": true,
+  "telegram": {
+    "enabled": false,
+    "botToken": "YOUR_BOT_TOKEN",
+    "chatId": "YOUR_CHAT_ID"
+  }
 }
+```
+
+**For Production, use environment variables:**
+```bash
+export SOLANA_RPC_URL="your-private-rpc"
+export KEYPAIR_PATH="/secure/path"
+export TREASURY_ADDRESS="your-treasury"
+export TELEGRAM_BOT_TOKEN="your-token"
+export TELEGRAM_CHAT_ID="your-chat"
 ```
 
 ## Step 3: Create Accounts List

@@ -2,10 +2,6 @@
 
 A quick note from the author: I've kept these steps terse and test-driven. Follow them in order; they were written to get you from zero to a working dashboard in minutes.
 
-**Status**: ✅ Production Ready  
-**All Phases**: 1-11 Complete  
-**Last Updated**: January 19, 2026
-
 ---
 
 ## What is This?
@@ -39,15 +35,24 @@ npm run build
 ```
 
 ### Step 3: Create Config
+
+**For Development:**
 ```bash
-node dist/cli.js init --output config.json
+cp config.dev.json config.json
 ```
 
-Edit the `config.json` file:
-- Point `rpcUrl` to your Solana endpoint
-- Set `keypairPath` to where your keypair is
-- Set `treasuryAddress` to where reclaimed SOL goes
-- Keep `dryRun: true` while testing
+Edit `config.json` if needed:
+- `rpcUrl` — Uses public devnet endpoint (fine for testing)
+- `keypairPath` — Path to your test keypair
+- `treasuryAddress` — Your test treasury address
+- `dryRun: true` — Safe, no transactions submitted
+- `logLevel: debug` — Verbose logging
+
+**For Production:**
+```bash
+cp config.prod.example.json config.json
+# Edit with environment variables (see section below)
+```
 
 ### Step 4: Start Dashboard
 ```bash
@@ -61,6 +66,71 @@ Open http://localhost:3000 in your browser.
 # In another terminal:
 node dist/cli.js analyze --config config.json
 ```
+
+---
+
+## Configuration Files
+
+Three config templates are provided:
+
+1. **config.dev.json** — Local development (devnet, dry-run, debug logging, localhost)
+2. **config.prod.example.json** — Production template (mainnet, uses env vars, live mode)
+3. **config-telegram-example.json** — Example with Telegram pre-configured
+
+### Environment Variables (Production Only)
+
+Never hardcode secrets. Create `.env` file:
+
+```bash
+export SOLANA_RPC_URL="https://your-private-rpc.example.com"
+export KEYPAIR_PATH="/secure/path/to/keypair.json"
+export TREASURY_ADDRESS="YOUR_TREASURY_PUBKEY"
+export TELEGRAM_BOT_TOKEN="YOUR_BOT_TOKEN"
+export TELEGRAM_CHAT_ID="YOUR_CHAT_ID"
+export DATA_DIR="/var/lib/bot-data"
+```
+
+Add to `.gitignore`:
+```
+.env
+config*.json
+!config.dev.json
+!config.prod.example.json
+!config-telegram-example.json
+```
+
+---
+
+## Production Deployment Checklist
+
+Before deploying to mainnet:
+
+**Development Phase:**
+- [ ] Understand the code and safety model
+- [ ] Test 5+ times on devnet (dry-run)
+- [ ] Test 5+ times on testnet-beta (dry-run)
+
+**Pre-Production:**
+- [ ] Verify treasury address 5+ times
+- [ ] Set up private RPC endpoint (Helius, Triton, Alchemy)
+- [ ] Store keypair in secure vault (AWS Secrets, HashiCorp Vault, HSM)
+- [ ] Configure Telegram alerts
+- [ ] Set up log aggregation (S3, CloudWatch, ELK)
+- [ ] Configure backup strategy for audit logs
+
+**Infrastructure:**
+- [ ] Set up monitoring/alerting
+- [ ] Configure reverse proxy (nginx) with TLS for dashboard
+- [ ] Restrict dashboard access to trusted IPs
+- [ ] Set up on-call rotation
+- [ ] Document runbook for operations team
+
+**Mainnet Launch:**
+- [ ] Run on testnet-beta first (live transactions, low amounts)
+- [ ] Monitor for 1+ week before full mainnet deployment
+- [ ] Set up automated backups for indexed-accounts.json and audit-log.json
+- [ ] Enable 2FA on Telegram bot account
+- [ ] Test failover/recovery procedures
 
 ---
 
@@ -637,5 +707,5 @@ Happy reclaiming! 🚀
 
 **Questions?** Check the documentation in `docs/` folder or review the source code with full comments.
 
-**Ready for production?** Review `IMPLEMENTATION_COMPLETE.md` for deployment options.
+
 

@@ -1,0 +1,29 @@
+{
+  "rpcUrl": "https://api.devnet.solana.com",
+  "cluster": "devnet",
+  "keypairPath": "./keypair.json",
+  "treasuryAddress": "11111111111111111111111111111111",
+  "indexPath": "./data/indexed-accounts.json",
+  "auditLogPath": "./data/audit-log.json",
+  "minInactivitySlots": 100000,
+  "maxRetries": 3,
+  "retryDelayMs": 1000,
+  "allowedPrograms": [],
+  "dryRun": true,
+  "logLevel": "info",
+  "telegram": {
+    "enabled": true,
+    "botToken": "8538169582:AAEGZhL_9QqzE371CnqLwJDa4euk2anaK_0",
+    "chatId": "688973525",
+    "alerts": {
+      "reclaimThreshold": 0.1,
+      "idleThreshold": 0.5,
+      "dailySummary": false
+    }
+  },
+  "dashboard": {
+    "enabled": false,
+    "port": 3000,
+    "host": "localhost"
+  }
+}

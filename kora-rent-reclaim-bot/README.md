@@ -1,8 +1,15 @@
 # Kora Rent Reclaim Bot
 
-Note from the maintainer: I wrote this README to be practical and hands-on — it focuses on what you'll actually run and verify. If anything is unclear, please open an issue and I'll update the guide.
+**Status**: ✅ Production Ready | **Build**: 0 Errors | **Version**: 1.0.0
 
 **An automated, production-grade bot for reclaiming rent-locked SOL from sponsored accounts created via Kora operators.**
+
+## 📖 Quick Links
+
+- **New here?** → [GETTING_STARTED.md](./GETTING_STARTED.md) (5-minute setup)
+- **Deploying to production?** → [PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md)
+- **All documentation** → [DOCUMENTATION.md](./DOCUMENTATION.md)
+- **Testing procedures** → [TESTING_AND_REALTIME_OPS.md](./TESTING_AND_REALTIME_OPS.md)
 
 ## Overview
 
@@ -148,6 +155,23 @@ Create a `config.json` file:
 }
 ```
 
+### Configuration Files Reference
+
+Three config examples are provided:
+
+1. **config.dev.json** — Local development (devnet, dry-run, debug)
+2. **config.prod.example.json** — Production template (mainnet, uses env vars)
+3. **config-telegram-example.json** — Telegram testing example
+
+**Quick start:**
+```bash
+# Development
+cp config.dev.json config.json
+
+# Production (edit with your environment variables first)
+cp config.prod.example.json config.json
+```
+
 ### Configuration Fields
 
 | Field | Type | Description |
@@ -168,6 +192,25 @@ Create a `config.json` file:
 | `dashboard.enabled` | boolean | Enable operator dashboard. **Production**: Restrict access to trusted IPs only |
 | `dashboard.port` | number | Dashboard port (default: 3000). **Production**: Use reverse proxy (nginx) and TLS |
 | `dashboard.host` | string | Dashboard host (default: localhost). **Production**: Use 0.0.0.0 only behind firewall |
+
+### Using Environment Variables (Production)
+
+Never hardcode secrets. Create `.env` file:
+
+```bash
+export SOLANA_RPC_URL="https://your-private-rpc.example.com"
+export KEYPAIR_PATH="/secure/path/to/keypair.json"
+export TREASURY_ADDRESS="YOUR_TREASURY_PUBKEY"
+export TELEGRAM_BOT_TOKEN="YOUR_BOT_TOKEN"
+export TELEGRAM_CHAT_ID="YOUR_CHAT_ID"
+export DATA_DIR="/var/lib/bot-data"
+```
+
+Then load and run:
+```bash
+source .env
+npm start -- reclaim --config config.prod.json
+```
 
 ## Usage
 

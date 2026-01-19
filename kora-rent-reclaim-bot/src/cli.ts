@@ -24,6 +24,7 @@ import { ReclaimExecutor } from "./reclaim/reclaimExecutor.js";
 import { Reporter } from "./reporting/reporter.js";
 import { DashboardServer } from "./dashboard/dashboardServer.js";
 import { ReclaimAction, ReclaimStatus } from "./utils/types.js";
+import { initializeAlertService, getAlertService } from "./alerting/telegramAlertService.js";
 
 /**
  * Main CLI entry point
@@ -177,6 +178,16 @@ async function main() {
 
           logInfo(`Starting reclaim process (${config.dryRun ? "DRY-RUN" : "LIVE"})...`);
 
+          // Initialize Telegram alerts if configured
+          const alertService = config.telegram
+            ? initializeAlertService(config.telegram)
+            : null;
+
+          // Test alert connection if enabled
+          if (alertService && alertService.isEnabled()) {
+            await alertService.testConnection();
+          }
+
           // Connect to Solana
           const connection = await getSolanaConnection(
             config.rpcUrl,
@@ -231,10 +242,33 @@ async function main() {
                 }
               );
 
+              // Send Telegram alert on successful reclaim
+              if (
+                action.status === ReclaimStatus.CONFIRMED &&
+                alertService &&
+                alertService.isEnabled()
+              ) {
+                const amountSol = action.amount / 1e9;
+                await alertService.alertRentReclaimed(
+                  analysis.publicKey.toString(),
+                  amountSol,
+                  action.txSignature || "pending"
+                );
+              }
+
               // Remove from index after successful reclaim
               if (action.status === ReclaimStatus.CONFIRMED) {
                 indexer.removeAccount(analysis.publicKey);
               }
+            } else if (alertService && alertService.isEnabled() && safetyResult.checks.some(c => !c.passed)) {
+              // Send alert on safety check failure
+              const failedChecks = safetyResult.checks
+                .filter(c => !c.passed)
+                .map(c => c.name);
+              await alertService.alertSafetyCheckFailed(
+                analysis.publicKey.toString(),
+                failedChecks
+              );
             }
           }
 
@@ -246,6 +280,16 @@ async function main() {
           // Save report
           const reportPath = config.auditLogPath.replace("audit-log.json", "report.json");
           reporter.saveReport(report, reportPath);
+
+          // Send analysis summary to Telegram
+          if (alertService && alertService.isEnabled()) {
+            const totalRentLocked = analyses.reduce((sum, a) => sum + a.reclaimableLamports, 0) / 1e9;
+            await alertService.sendAnalysisSummary(
+              analyses.length,
+              approvedCount,
+              totalRentLocked
+            );
+          }
 
           logInfo(`✓ Reclaim process complete`, {
             analyzed: analyses.length,
@@ -334,6 +378,50 @@ async function main() {
           process.exit(0);
         } catch (error) {
           logError("stats", error instanceof Error ? error.message : String(error));
+          process.exit(1);
+        }
+      }
+    )
+
+    .command(
+      "test-telegram",
+      "Test Telegram alerting configuration",
+      (yargs) =>
+        yargs.option("config", {
+          alias: "c",
+          describe: "Path to config file",
+          default: "config.json",
+          type: "string",
+        }),
+      async (argv) => {
+        try {
+          const config = loadConfig(argv.config as string);
+          initializeLogger(config.logLevel);
+
+          if (!config.telegram || !config.telegram.enabled) {
+            logError("test-telegram", "Telegram alerting not enabled in config");
+            process.exit(1);
+          }
+
+          logInfo("Testing Telegram connection...");
+
+          const alertService = initializeAlertService(config.telegram);
+          const success = await alertService.testConnection();
+
+          if (success) {
+            logInfo("✓ Telegram connection test successful");
+            console.log("\n✅ Alerts will be sent to your Telegram chat\n");
+            process.exit(0);
+          } else {
+            logError("test-telegram", "Connection test failed");
+            console.log("\n❌ Failed to connect. Check:");
+            console.log("  • Bot token is correct");
+            console.log("  • Chat ID is correct");
+            console.log("  • Network connectivity\n");
+            process.exit(1);
+          }
+        } catch (error) {
+          logError("test-telegram", error instanceof Error ? error.message : String(error));
           process.exit(1);
         }
       }
