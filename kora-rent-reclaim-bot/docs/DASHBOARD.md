@@ -1,18 +1,27 @@
-# Phase 9: Operator Dashboard
+# Operator Dashboard
+
+Note: This dashboard guide was written for operators. It explains what to watch and why — not just how to click around.
+
+## Quick Links
+
+- **Development**: Run locally on `http://localhost:3000`
+- **Production**: See [Security for Production](#security-for-production) section below
+- **Troubleshooting**: [GETTING_STARTED.md](../GETTING_STARTED.md#production-issues)
 
 ## Overview
 
-The Operator Dashboard is a local, read-only web interface for monitoring reclaim operations in real-time. It provides visual insights into account tracking, reclaim events, audit logs, and system warnings without requiring direct access to data files.
+The Operator Dashboard is a web interface for watching your bot work in real-time. It's read-only (no wallet connections or signing), so it's safe to leave running. You get:
 
-**Features:**
-- Real-time metrics and statistics
-- Account tracking with detailed information
-- Visual timeline of reclaim events
-- Active warnings and system alerts
-- Responsive, mobile-friendly design
-- No transaction signing or wallet connections
+- Real-time metrics and stats
+- Full account tracking with details
+- A timeline showing reclaim events
+- Active warnings and alerts
+- Works on mobile too
+- No signing or wallet stuff
 
 ## Quick Start
+
+Get the dashboard running in 3 steps:
 
 ### 1. Enable Dashboard in Config
 
@@ -46,6 +55,71 @@ http://localhost:3000
 ```
 
 You should see the operator dashboard with real-time metrics.
+
+## Security for Production
+
+**DO NOT expose your dashboard to the internet without proper controls.** Follow these guidelines:
+
+### Network Access Control
+
+**Localhost Only (Recommended):**
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "port": 3000,
+    "host": "127.0.0.1"
+  }
+}
+```
+
+**VPN/Private Network Only:**
+```json
+{
+  "dashboard": {
+    "enabled": true,
+    "port": 3000,
+    "host": "0.0.0.0"
+  }
+}
+```
+Then use a VPN or SSH tunnel to access:
+```bash
+# SSH tunnel example
+ssh -L 3000:localhost:3000 user@prod-server
+# Access at http://localhost:3000 on your local machine
+```
+
+**Behind Reverse Proxy:**
+Use nginx/Apache with:
+- IP whitelisting
+- Basic HTTP auth
+- TLS/SSL encryption
+- Rate limiting
+
+### Best Practices
+
+1. **Never expose dashboard directly to the internet** — Always use VPN, SSH tunnel, or firewall rules
+2. **Use localhost binding** — Set `host: "127.0.0.1"` for local-only access
+3. **Monitor dashboard access** — Log all connections, set up alerts for anomalies
+4. **Separate monitoring account** — Use a dedicated monitoring keypair (no signing authority)
+5. **Rotate credentials** — If using basic auth, rotate passwords monthly
+6. **Log sensitive data carefully** — Dashboard logs may contain account addresses; don't expose logs publicly
+
+### Production Firewall Rules
+
+If your bot runs on a server:
+
+```bash
+# Allow only your IP to access dashboard
+ufw allow from 203.0.113.100 to any port 3000
+
+# Allow internal network only
+ufw allow from 10.0.0.0/8 to any port 3000
+
+# Deny everything else
+ufw deny 3000
+```
 
 ## Dashboard Components
 

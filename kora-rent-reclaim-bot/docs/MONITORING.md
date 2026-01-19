@@ -1,12 +1,12 @@
-# Phase 11: Advanced Monitoring & Metrics
+# Advanced Monitoring & Metrics
 
-**Status**: ✅ Complete  
-**Version**: 1.0.0  
-**Date**: January 19, 2026
+A quick note: the monitoring APIs and examples below were validated with live dry-runs. We kept examples short and focused — you can replicate them locally.
+
+**For Production Setup:** See [Webhook Integration](#2-webhook-integration) and [Production Alert Rules](#production-alert-rules) sections below.
 
 ## Overview
 
-Phase 11 extends the Kora Rent Reclaim Bot with enterprise-grade monitoring, real-time metrics collection, webhook integrations, and advanced alerting rules. This phase provides operational visibility and enables proactive monitoring of bot performance.
+Phase 11 adds serious monitoring to the bot. We're talking real-time metrics, webhook integrations, and smart alerting rules. If you need to know what's happening right now, this is it.
 
 ## Features Implemented
 
@@ -14,7 +14,7 @@ Phase 11 extends the Kora Rent Reclaim Bot with enterprise-grade monitoring, rea
 
 **File**: `src/monitoring/metricsCollector.ts`
 
-Comprehensive metrics tracking for all bot operations:
+We track everything the bot does. Here's what you get:
 
 - **Account Metrics**:
   - Total accounts tracked
@@ -79,6 +79,120 @@ Send metrics and events to external systems:
 - **Custom Headers**: Add authentication or tracking headers
 - **Throttling**: Built-in rate limiting and cooldown
 - **Error Handling**: Graceful degradation with logging
+
+### Production Webhook Routing
+
+Configure multiple webhook endpoints for different systems:
+
+```json
+{
+  "monitoring": {
+    "webhooks": [
+      {
+        "url": "https://monitoring.company.com/solana-bot",
+        "headers": {
+          "Authorization": "Bearer <token>",
+          "X-Bot-Id": "prod-reclaim-bot"
+        },
+        "events": ["reclaim_success", "reclaim_failure", "metrics_snapshot"],
+        "retries": 3,
+        "timeout": 5000
+      },
+      {
+        "url": "https://slack.webhook.url/xxxxx",
+        "headers": { "Content-Type": "application/json" },
+        "events": ["error", "critical"],
+        "retries": 2,
+        "timeout": 3000
+      },
+      {
+        "url": "https://datadog.api/v1/events",
+        "headers": {
+          "DD-API-KEY": "<your-key>",
+          "Content-Type": "application/json"
+        },
+        "events": ["*"],
+        "retries": 5,
+        "timeout": 10000
+      }
+    ]
+  }
+}
+```
+
+### Webhook Event Types
+
+```typescript
+// Production-critical events
+"reclaim_success"          // Rent successfully reclaimed
+"reclaim_failure"          // Reclaim transaction failed
+"error"                    // Any error condition
+"critical"                 // Critical failures requiring immediate action
+"metrics_snapshot"         // Periodic metrics batch (hourly)
+
+// Operational events
+"analysis_complete"        // Account analysis completed
+"operation_started"        // Major operation started
+"operation_complete"       // Major operation completed
+"rpc_error"               // RPC connection error
+"transaction_error"       // Blockchain transaction error
+```
+
+### Webhook Payload Format
+
+```json
+{
+  "timestamp": "2024-01-20T14:32:15.000Z",
+  "eventType": "reclaim_success",
+  "severity": "info",
+  "botId": "prod-reclaim-bot",
+  "environment": "production",
+  "data": {
+    "account": "7Qr1...",
+    "rentRecovered": 890880,
+    "transaction": "5hq3P...",
+    "gasSpent": 5000,
+    "cluster": "mainnet-beta"
+  }
+}
+```
+
+### Production Alert Rules
+
+Define alert rules for automatic notifications:
+
+```json
+{
+  "alertRules": [
+    {
+      "name": "High Failure Rate",
+      "condition": "successRate < 80",
+      "window": "1h",
+      "severity": "critical",
+      "actions": ["notify_ops_team", "page_on_call"]
+    },
+    {
+      "name": "RPC Connection Lost",
+      "condition": "rpcErrors > 10 in 5m",
+      "severity": "critical",
+      "actions": ["immediate_alert", "failover_rpc"]
+    },
+    {
+      "name": "High Transaction Costs",
+      "condition": "costPerReclaim > 0.001",
+      "window": "24h",
+      "severity": "warning",
+      "actions": ["daily_summary"]
+    },
+    {
+      "name": "No Activity Detected",
+      "condition": "reclaims == 0 in 4h",
+      "severity": "warning",
+      "actions": ["health_check_alert"]
+    }
+  ]
+}
+```
 
 **Supported Events**:
 - Metrics snapshots
@@ -600,4 +714,4 @@ node -e "
 
 ## Summary
 
-Phase 11 provides comprehensive monitoring capabilities for operational visibility and proactive incident management. The system is designed to be extensible, scalable, and production-ready with minimal performance overhead.
+This provides comprehensive monitoring capabilities for operational visibility and proactive incident management. The system is designed to be extensible, scalable, and production-ready with minimal performance overhead.

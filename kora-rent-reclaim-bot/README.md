@@ -1,21 +1,23 @@
 # Kora Rent Reclaim Bot
 
+Note from the maintainer: I wrote this README to be practical and hands-on — it focuses on what you'll actually run and verify. If anything is unclear, please open an issue and I'll update the guide.
+
 **An automated, production-grade bot for reclaiming rent-locked SOL from sponsored accounts created via Kora operators.**
 
 ## Overview
 
-Solana account creation requires a minimum lamport balance to remain rent-exempt. When Kora operators sponsor account creation for users, those lamports become locked in the account indefinitely—unless the account is closed.
+Solana accounts need a minimum lamport balance to stay rent-exempt. When Kora operators sponsor account creation for users, those lamports get locked indefinitely—unless we close the account.
 
-This bot:
-1. **Tracks** accounts created via Kora sponsorship
-2. **Monitors** their on-chain state
-3. **Analyzes** safety and reclaimability
-4. **Reclaims** rent via automated transactions
-5. **Audits** all actions for transparency
+Here's what this bot does:
+1. **Finds** accounts created via Kora sponsorship
+2. **Checks** their on-chain state
+3. **Validates** they're safe to reclaim
+4. **Reclaims** rent through transactions
+5. **Logs** everything for transparency
 
 ## Why This Matters
 
-On Solana's devnet and mainnet, operators can accumulate thousands of sponsored accounts. Each account locks SOL that would otherwise be available. A bot that systematically identifies and reclaims this rent can significantly improve capital efficiency.
+Operators can end up with thousands of sponsored accounts on devnet or mainnet. Each one locks up SOL. A bot that finds and reclaims this rent? That's a big win for capital efficiency.
 
 **Example:**
 - 1,000 sponsored accounts at 890,880 lamports each = **~0.89 SOL per account**
@@ -50,40 +52,48 @@ User Input (config.json)
 ### Key Concepts
 
 #### 1. Rent Exemption
-In Solana, accounts must maintain a minimum lamport balance to avoid rent collection:
-- Rent is collected annually
-- Minimum balance depends on account data size
-- Most accounts require ~890,880 lamports for rent exemption
+Accounts on Solana need a minimum balance to avoid paying rent each year. Here's the deal:
+- Rent gets collected annually (harsh, but that's Solana)
+- How much you need depends on the account data size
+- Most accounts? Around 890,880 lamports to be safe
 
 #### 2. Sponsored Accounts
-Kora operators create accounts on behalf of users:
-- Accounts are created via `SystemProgram.createAccount`
-- Operator pays the rent-exempt balance
-- If the account is never used, the SOL is locked forever
+Kora operators create accounts for users on their behalf:
+- They call `SystemProgram.createAccount`
+- The operator pays the rent-exempt balance upfront
+- If that account never gets used? That SOL's stuck forever
 
 #### 3. Reclaim Conditions
-The bot ONLY reclaims from accounts that are:
-- **Empty** (no custom data)
-- **Inactive** (haven't been modified in N slots)
-- **Safe** (not PDAs, not unknown programs)
-- **Valuable** (have enough SOL to justify the transaction fee)
+We only reclaim from accounts that meet all of these:
+- **Empty** — no data in them
+- **Inactive** — haven't been touched in N slots
+- **Safe** — not PDAs, not weird program accounts
+- **Worth it** — enough SOL to cover the transaction fee
 
 #### 4. Safety Guarantees
-The bot implements multiple safety layers:
-- **NEVER** closes PDAs (Program Derived Addresses)
-- **NEVER** closes unknown program accounts
-- **NEVER** closes accounts with token balances
-- **NEVER** closes accounts with recent activity
-- All decisions are logged and auditable
-- Default to dry-run mode (safe by default)
+We built in multiple safety checks. The bot will:
+- **Never** close PDAs (Program Derived Addresses)
+- **Never** touch unknown program accounts
+- **Never** mess with token accounts
+- **Never** touch recently-used accounts
+- Log every decision (fully auditable)
+- Start in dry-run mode by default (fail-safe)
 
 ## Installation
 
 ### Prerequisites
-- Node.js 16+
+You'll need:
+- Node.js 16 or higher
 - npm or yarn
-- A Solana keypair (JSON format)
-- Devnet SOL for testing (faucet.solana.com)
+- A Solana keypair (JSON format) — keep this secure in production
+- Some devnet SOL for testing (grab it from faucet.solana.com)
+
+**For Production:**
+- Private RPC endpoint (not public API)
+- Hardware wallet or KMS for keypair storage
+- Monitoring and alerting infrastructure
+- Secure backup procedures
+- Load balancing (if running at scale)
 
 ### Setup
 
@@ -142,22 +152,22 @@ Create a `config.json` file:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `rpcUrl` | string | Solana RPC endpoint (public or private) |
-| `cluster` | string | Network: devnet, testnet-beta, mainnet-beta |
-| `keypairPath` | string | Path to operator keypair (JSON format) |
-| `treasuryAddress` | string | Where reclaimed SOL is sent |
-| `indexPath` | string | Local file tracking sponsored accounts |
-| `auditLogPath` | string | Audit log of all actions |
-| `minInactivitySlots` | number | Slots before account eligible for reclaim (~46 hours on devnet) |
-| `dryRun` | boolean | **RECOMMENDED: true** Do not submit transactions, just analyze |
-| `telegram.enabled` | boolean | Enable Telegram alerts (optional) |
-| `telegram.botToken` | string | Telegram bot token from BotFather |
-| `telegram.chatId` | string | Your Telegram chat ID |
-| `telegram.alerts.reclaimThreshold` | number | Min SOL to alert on successful reclaim |
-| `telegram.alerts.idleThreshold` | number | Min idle SOL to alert on detection |
-| `dashboard.enabled` | boolean | Enable operator dashboard (optional) |
-| `dashboard.port` | number | Dashboard port (default: 3000) |
-| `dashboard.host` | string | Dashboard host (default: localhost) |
+| `rpcUrl` | string | **Production**: Use private endpoint (Helius, Triton, Alchemy). **Dev**: Use public endpoint |
+| `cluster` | string | Network: `devnet`, `testnet-beta`, or `mainnet-beta`. Start with devnet, test on testnet, then mainnet |
+| `keypairPath` | string | Path to operator keypair (JSON). **Production**: Store in secure vault (AWS Secrets, Vault, HSM). Never commit to git |
+| `treasuryAddress` | string | Where reclaimed SOL is sent. **Production**: Verify address 5+ times before going live |
+| `indexPath` | string | Local file tracking sponsored accounts. Back up daily in production |
+| `auditLogPath` | string | Audit log of all actions. **Production**: Ship logs to external storage (S3, CloudWatch, etc.) |
+| `minInactivitySlots` | number | Slots before account eligible (~46 hours on devnet, ~2 days on mainnet). Tune based on your tolerance |
+| `dryRun` | boolean | **ALWAYS true on first runs**. Only set false after reviewing dry-run output 3+ times |
+| `telegram.enabled` | boolean | Enable Telegram alerts. Recommended for production monitoring |
+| `telegram.botToken` | string | Telegram bot token from BotFather. Store in secure vault, not in git |
+| `telegram.chatId` | string | Your Telegram chat ID. Multiple chat IDs can receive alerts |
+| `telegram.alerts.reclaimThreshold` | number | Only alert on reclaims >= this SOL. Prevents alert fatigue |
+| `telegram.alerts.idleThreshold` | number | Only alert on idle >= this SOL. Reduce noise on testnet |
+| `dashboard.enabled` | boolean | Enable operator dashboard. **Production**: Restrict access to trusted IPs only |
+| `dashboard.port` | number | Dashboard port (default: 3000). **Production**: Use reverse proxy (nginx) and TLS |
+| `dashboard.host` | string | Dashboard host (default: localhost). **Production**: Use 0.0.0.0 only behind firewall |
 
 ## Usage
 
@@ -202,7 +212,7 @@ npm start -- analyze
 
 Output shows which accounts pass safety checks.
 
-### 4. Dry-Run Reclaim
+### 4. Dry-Run Reclaim (MANDATORY FIRST STEP)
 
 Test reclaim logic without submitting transactions:
 
@@ -210,20 +220,29 @@ Test reclaim logic without submitting transactions:
 npm start -- reclaim --dry-run true
 ```
 
-**ALWAYS run this first!** Review the output before proceeding.
+**ALWAYS run this first!** Review the output carefully:
+- ✅ Account counts match your data
+- ✅ Rent amounts are reasonable
+- ✅ No suspicious patterns
+- ✅ Transaction fees are acceptable
+
+Run dry-run **3 times on devnet** before moving to testnet. Run **3 times on testnet** before going to mainnet.
 
 ### 5. Execute Live Reclaim
 
-Once confident, execute actual transactions:
+Once confident after multiple dry-runs:
 
 ```bash
 npm start -- reclaim --dry-run false
 ```
 
-⚠️ **WARNING**: This submits real transactions! Ensure:
-- `treasury` address is correct
-- Keypair is secure
-- Sufficient SOL for fees
+⚠️ **PRODUCTION WARNING**: This submits real transactions! Ensure:
+- `treasuryAddress` is correct (verify 5+ times)
+- Keypair is stored securely (not in code, not in git)
+- You have sufficient SOL for transaction fees
+- Dashboard monitoring is active
+- Telegram alerts are configured
+- Someone is watching in real-time
 
 ### 6. Check Reports
 
@@ -239,26 +258,37 @@ View indexer statistics:
 npm start -- stats
 ```
 
-### 7. Start Operator Dashboard (Phase 9)
+### 7. Monitor Operations (Production Setup)
 
-Monitor operations with a real-time web dashboard:
+View real-time dashboard:
 
 ```bash
 npm start -- dashboard --config config.json
 ```
 
-Access at `http://localhost:3000`
+Access at `http://localhost:3000` (or your configured host/port).
 
-**Dashboard Features:**
-- Real-time metrics and statistics
-- Account tracking with detailed information
-- Visual timeline of reclaim events
-- Active warnings and alerts
-- Read-only interface (no transaction signing)
+**Production Dashboard Setup:**
+- Restrict access to trusted IPs via firewall
+- Use reverse proxy (nginx) with TLS/SSL
+- Monitor dashboard server health separately
+- Set up automated screenshot captures for alerting systems
+- Log all dashboard access (for compliance)
+- Back up dashboard data directory
 
-See [PHASE_9_DASHBOARD.md](./docs/PHASE_9_DASHBOARD.md) for full documentation.
+**Log Aggregation (Production):**
+- Stream logs to ELK, Datadog, or CloudWatch
+- Set up alerts on error rates (>1% failure rate)
+- Monitor RPC endpoint health continuously
+- Track transaction failures by type
+- Create dashboards for:
+  - Transaction success rate
+  - Average reclaim amount
+  - Fees paid per day
+  - Error frequency
+  - System uptime
 
-### 8. Telegram Alerting (Phase 10)
+### 8. Telegram Alerting (Phase 10 - Production)
 
 Receive real-time alerts on important events:
 

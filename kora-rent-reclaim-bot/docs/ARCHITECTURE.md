@@ -1,38 +1,94 @@
 # Architecture Overview
 
+Note: This architecture document is written for SREs and operators. It focuses on the moving parts and what happens when things break.
+
 ## Project Structure
 
 ```
 kora-rent-reclaim-bot/
-├── src/
-│   ├── cli.ts                          # CLI entry point (yargs commands)
-│   ├── config.ts                       # Configuration loading & validation
-│   ├── indexer/
-│   │   └── sponsorshipIndexer.ts       # Tracks sponsored accounts
-│   ├── analyzer/
-│   │   └── accountAnalyzer.ts          # Analyzes account state
-│   ├── safety/
-│   │   └── safetyEngine.ts             # Enforces safety rules (CRITICAL)
-│   ├── reclaim/
-│   │   └── reclaimExecutor.ts          # Executes reclaim transactions
-│   ├── reporting/
-│   │   └── reporter.ts                 # Generates reports & audit logs
-│   └── utils/
-│       ├── types.ts                    # Core type definitions
-│       ├── logging.ts                  # Winston-based logging
-│       └── solana.ts                   # Solana utility functions
-├── docs/
-│   ├── kora-rent-flow.md               # How Kora sponsorship works
-│   ├── solana-rent-explained.md        # Solana rent deep dive
-│   └── QUICKSTART.md                   # 10-minute setup guide
-├── package.json
-├── tsconfig.json
-├── config.example.json
-├── .gitignore
-└── README.md
+├── 📄 package.json                     # Dependencies & build scripts
+├── 📄 tsconfig.json                    # TypeScript configuration
+├── 📄 config.example.json              # Example configuration template
+├── 📄 .gitignore                       # Git ignore rules
+│
+├── 📄 README.md                        # Main project documentation
+├── 📄 GETTING_STARTED.md               # 5-minute quick start
+├── 📄 IMPLEMENTATION_COMPLETE.md       # Complete project overview
+├── 📄 SESSION_SUMMARY_2026_01_19.md    # Session artifacts & changes
+├── 📄 FILE_MANIFEST.md                 # This repository manifest
+├── 📄 TESTING_AND_REALTIME_OPS.md      # Testing & operations guide
+│
+├── 📁 src/
+│   ├── 📄 cli.ts                       # CLI entry point (7 commands)
+│   ├── 📄 config.ts                    # Configuration loader & validator
+│   ├── 📄 index.ts                     # Main export file
+│   │
+│   ├── 📁 utils/
+│   │   ├── 📄 types.ts                 # Core type definitions
+│   │   ├── 📄 logging.ts               # Winston logger wrapper
+│   │   └── 📄 solana.ts                # Solana RPC utilities
+│   │
+│   ├── 📁 indexer/
+│   │   └── 📄 sponsorshipIndexer.ts    # Account tracking & import/export
+│   │
+│   ├── 📁 analyzer/
+│   │   └── 📄 accountAnalyzer.ts       # Account state analysis
+│   │
+│   ├── 📁 safety/
+│   │   └── 📄 safetyEngine.ts          # 9-point safety validation (CRITICAL)
+│   │
+│   ├── 📁 reclaim/
+│   │   └── 📄 reclaimExecutor.ts       # Transaction construction & execution
+│   │
+│   ├── 📁 reporting/
+│   │   └── 📄 reporter.ts              # Reports & audit logging
+│   │
+│   ├── 📁 dashboard/                   # Phase 9: Web dashboard
+│   │   ├── 📄 dashboardServer.ts       # Express.js server & REST APIs
+│   │   ├── 📄 index.html               # Dashboard UI
+│   │   ├── 📄 style.css                # Dashboard styling
+│   │   └── 📄 dashboard.js             # Frontend logic
+│   │
+│   ├── 📁 alerts/                      # Phase 10: Telegram alerting
+│   │   └── 📄 telegramAlertService.ts  # Telegram notifications
+│   │
+│   └── 📁 monitoring/                  # Phase 11: Enterprise monitoring
+│       ├── 📄 metricsCollector.ts      # Real-time metrics (391 lines)
+│       ├── 📄 webhookIntegration.ts    # Webhook delivery (320 lines)
+│       ├── 📄 alertRulesEngine.ts      # Alert rule evaluation (410 lines)
+│       └── 📄 orchestrator.ts          # Monitoring coordinator (322 lines)
+│
+├── 📁 docs/
+│   ├── 📄 PHASE_9_DASHBOARD.md         # Dashboard usage guide
+│   ├── 📄 PHASE_10_ALERTING.md         # Telegram alerting setup
+│   ├── 📄 PHASE_11_MONITORING.md       # Monitoring & metrics API
+│   ├── 📄 QUICKSTART.md                # 10-minute setup guide
+│   ├── 📄 DEVNET-TESTING.md            # Devnet testing procedures
+│   ├── 📄 ARCHITECTURE.md              # This file
+│   ├── 📄 solana-rent-explained.md     # Solana rent concepts
+│   ├── 📄 kora-rent-flow.md            # Kora sponsorship workflow
+│   └── 📁 PHASE_9_DASHBOARD_ASSETS/    # Dashboard documentation assets
+│
+├── 📁 data/                            # Runtime data (git-ignored)
+│   ├── indexed-accounts.json           # Primary account index
+│   └── audit-log.json                  # Append-only audit trail
+│
+├── 📁 logs/                            # Runtime logs (git-ignored)
+│   ├── bot.log                         # Main application log
+│   └── error.log                       # Error-specific log
+│
+├── 📁 dist/                            # Build output (git-ignored)
+│   ├── **/*.js                         # Compiled JavaScript
+│   └── **/*.d.ts                       # Type definitions
+│
+├── 📄 config.json                      # Generated runtime config (git-ignored)
+├── 📄 keypair.json                     # Solana keypair (git-ignored)
+└── 📄 accounts.json                    # Sample accounts file (optional)
 ```
 
 ## Data Flow
+
+Here's how data moves through the bot. Each phase is independent, so if one fails, you can retry it.
 
 ### 1. Configuration Phase
 ```
@@ -534,21 +590,87 @@ Implement:
 ## Deployment
 
 ### Development
+
+For local testing and development:
+
 ```bash
 npm run dev -- [command]
 ```
 
-### Production
+### Staging (Testnet)
+
+Before going to production, deploy to Solana testnet with the same infrastructure:
+
 ```bash
+# Build production artifacts
 npm run build
-npm start -- [command]
+
+# Create staging config (testnet RPC, staging keypair)
+cp config.example.json config.staging.json
+# Edit config.staging.json to point to testnet
+
+# Deploy with staging configuration
+npm start -- reclaim --config config.staging.json --dry-run true
+```
+
+### Production Deployment Options
+
+See [GETTING_STARTED.md](../GETTING_STARTED.md#moving-to-production) for complete production setup. Common options:
+
+**Option 1: Systemd Service (Linux/macOS)**
+```bash
+# Install as systemd service
+sudo cp kora-bot.service /etc/systemd/system/
+sudo systemctl enable kora-bot
+sudo systemctl start kora-bot
+```
+
+**Option 2: Docker Container**
+```bash
+# Build and run
+docker build -t solana-bot .
+docker run -d \
+  --name solana-reclaim \
+  -v /config:/app/config \
+  -v /data:/app/data \
+  -v /logs:/app/logs \
+  solana-bot
+```
+
+**Option 3: Kubernetes Deployment**
+```bash
+kubectl apply -f kora-bot-deployment.yaml
+kubectl logs -f deployment/solana-reclaim
+```
+
+**Option 4: PM2 Process Manager**
+```bash
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup
 ```
 
 ### Automation
+
+**Cron-based reclaims (every 6 hours):**
 ```bash
-# Cron example (every 6 hours)
-0 */6 * * * cd /path/to/bot && npm start -- reclaim --dry-run false >> cron.log 2>&1
+0 */6 * * * cd /path/to/bot && npm start -- reclaim --config config.json >> cron.log 2>&1
 ```
+
+**With monitoring/alerting:**
+```bash
+0 */6 * * * /path/to/bot/run-with-monitoring.sh
+```
+
+**Key Production Considerations:**
+
+1. **RPC Endpoint**: Use a private/paid RPC endpoint, never public API
+2. **Keypair Storage**: Store in secure vault (AWS Secrets, HashiCorp Vault), never in git
+3. **Logging**: Send logs to centralized system (CloudWatch, ELK, Datadog)
+4. **Monitoring**: Set up alerts for failures, high costs, or inactivity
+5. **Backups**: Daily backup of audit logs and indexed accounts
+6. **Runbooks**: Document recovery procedures before production
+7. **Testing**: Run through staging first; use dry-run on mainnet initially
 
 ---
 

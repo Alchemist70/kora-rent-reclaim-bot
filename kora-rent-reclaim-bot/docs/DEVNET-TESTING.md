@@ -1,8 +1,22 @@
 # Devnet Testing Guide
 
-Complete guide to testing the Kora Rent Reclaim Bot on Solana devnet.
+This guide describes how we test on devnet. It mirrors the steps we run before any mainnet attempt — small, repeatable, and well logged.
+
+**For Production Deployment:** See [GETTING_STARTED.md](../GETTING_STARTED.md) for moving from devnet → testnet → mainnet. This guide covers development testing only.
+
+## Testing Progression
+
+Before going live on mainnet, follow this progression:
+
+1. **Devnet** (this guide) — Free testing with fake SOL
+2. **Testnet** (next) — Mirrors mainnet with free SOL from faucet
+3. **Mainnet** (production) — Real SOL and real accounts
+
+Each stage uses the same code and configuration, just different RPC endpoints and keypairs.
 
 ## Environment Setup
+
+Let's get your devnet environment ready. Follow these steps in order.
 
 ### 1. Install Solana CLI
 
@@ -14,22 +28,9 @@ sh -c "$(curl -sSfL https://release.solana.com/v1.17.0/install)"
 # Follow: https://docs.solana.com/cli/install-solana-cli-tools
 ```
 
-### 2. Configure Solana CLI for Devnet
+### 2. Point Solana CLI to Devnet
 
-```bash
-# Set default cluster
-solana config set --url https://api.devnet.solana.com
-
-# Verify configuration
-solana config get
-
-# Expected output:
-# Config File: ~/.config/solana/cli/config.yml
-# RPC URL: https://api.devnet.solana.com
-# WebSocket URL: wss://api.devnet.solana.com/ (computed)
-# Keypair Path: ~/.config/solana/id.json
-# Commitment: confirmed
-```
+Tell Solana CLI where to connect:
 
 ### 3. Create a Devnet Keypair
 

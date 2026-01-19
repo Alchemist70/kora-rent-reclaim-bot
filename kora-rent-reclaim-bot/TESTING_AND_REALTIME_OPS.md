@@ -1,5 +1,7 @@
 # Testing & Real-Time Operations Guide
 
+Note: This document is a practical playbook — written by the engineers who run the system daily. It focuses on reproducible steps and what to watch for in real time.
+
 **System Status**: ✅ Dashboard Running at http://localhost:3000  
 **Architecture**: Multi-layer validation with real-time monitoring  
 **Safety Level**: Enterprise-grade with mandatory dry-run testing
@@ -13,11 +15,11 @@ The Solana Kora Rent Reclaim Bot uses a **3-tier testing approach** before any l
 ```
 Test Environment (devnet)
     ↓
-Validation Checks (Phase 2-8)
+Validation Checks
     ↓
-Dry-Run Simulation (Phase 1-10)
+Dry-Run Simulation 
     ↓
-Live Execution with Real-Time Monitoring (Phase 9-11)
+Live Execution with Real-Time Monitoring
 ```
 
 Every operation is logged, monitored, and reversible (when possible).
@@ -72,10 +74,9 @@ cat test-config.json
 }
 ```
 
-**Validate configuration:**
+**Validate your configuration:**
 
-```bash
-# Load and parse config
+Load it up and see if it parses okay:
 node dist/cli.js init --output /dev/null --config test-config.json
 
 # Check logs for errors
@@ -84,7 +85,7 @@ tail -f logs/error.log
 
 ### 1.3 Account Indexing Test
 
-**Import small test dataset:**
+Let's test that imports work. Create a small test dataset:
 
 ```bash
 # Create test accounts file with 5 sample accounts
@@ -952,6 +953,299 @@ top -p $(pgrep -f "node dist/cli.js")
 - Skip validation checks
 - Use high-risk configurations
 - Operate without backups
+
+---
+
+## Part 4: Production Readiness Checklist
+
+Before deploying to mainnet, verify ALL of these:
+
+### Pre-Deployment Checklist
+
+- [ ] **Keypair Security**
+  - [ ] Production keypair stored in secure vault (not in git)
+  - [ ] Test keypair removed from production environment
+  - [ ] Keypair permissions restricted (chmod 400)
+  - [ ] Backup of keypair stored securely offline
+
+- [ ] **RPC Endpoint**
+  - [ ] Using private RPC endpoint (not public API)
+  - [ ] Rate limiting configured appropriately
+  - [ ] RPC endpoint verified with test transaction
+  - [ ] Backup RPC endpoints configured for failover
+
+- [ ] **Configuration**
+  - [ ] Mainnet cluster setting verified
+  - [ ] Treasury address verified (test 3 times!)
+  - [ ] Min inactivity slots appropriate for mainnet (≥500k slots)
+  - [ ] Dry-run mode disabled ONLY for live operations
+  - [ ] Logging level set to "info" or "warn" (not "debug")
+
+- [ ] **Safety Checks**
+  - [ ] Ran 3x dry-run on devnet with test data
+  - [ ] Ran 3x dry-run on testnet with real-like data
+  - [ ] Verified safety engine blocks PDAs
+  - [ ] Verified safety engine blocks program-owned accounts
+  - [ ] Tested failure scenarios (RPC down, insufficient SOL, etc.)
+
+- [ ] **Monitoring & Alerting**
+  - [ ] Telegram alerts configured for production
+  - [ ] Webhook endpoints validated
+  - [ ] Alert rules tested and verified
+  - [ ] Log aggregation configured (CloudWatch, Datadog, etc.)
+  - [ ] Dashboard accessible via VPN only
+  - [ ] Metrics collection enabled
+
+- [ ] **Operations**
+  - [ ] Runbook created for common issues
+  - [ ] On-call rotation established
+  - [ ] Incident response procedures documented
+  - [ ] Backup and recovery procedures tested
+  - [ ] Daily monitoring routine established
+  - [ ] Weekly review process scheduled
+
+- [ ] **Documentation**
+  - [ ] Deployment procedure documented
+  - [ ] Emergency shutdown procedure documented
+  - [ ] Recovery procedures tested
+  - [ ] Team trained on monitoring dashboard
+  - [ ] Change log maintained
+
+### Production Deployment Options
+
+#### Option 1: Systemd Service (Recommended for Linux)
+
+Create `/etc/systemd/system/kora-bot.service`:
+```ini
+[Unit]
+Description=Kora Rent Reclaim Bot
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=solana
+WorkingDirectory=/opt/kora-bot
+ExecStart=/usr/bin/node dist/cli.js reclaim --config /etc/kora-bot/config.json
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=kora-bot
+Environment="NODE_ENV=production"
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then start:
+```bash
+sudo systemctl enable kora-bot
+sudo systemctl start kora-bot
+sudo journalctl -u kora-bot -f  # Monitor
+```
+
+#### Option 2: Docker (Recommended for Cloud)
+
+Create `Dockerfile`:
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+
+# Install dependencies
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy compiled code
+COPY dist/ ./dist/
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+
+# Mount volumes for config and data
+VOLUME ["/config", "/data", "/logs"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/api/metrics', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
+
+USER nodejs
+EXPOSE 3000
+CMD ["node", "dist/cli.js", "reclaim", "--config", "/config/config.json"]
+```
+
+Run:
+```bash
+docker run -d \
+  --name kora-reclaim \
+  --restart=always \
+  -v /secure/config:/config:ro \
+  -v /var/kora/data:/data \
+  -v /var/kora/logs:/logs \
+  -p 3000:3000 \
+  kora-reclaim:latest
+```
+
+#### Option 3: Kubernetes (Recommended for Enterprise)
+
+Create `deployment.yaml`:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kora-reclaim-bot
+  namespace: solana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kora-reclaim-bot
+  template:
+    metadata:
+      labels:
+        app: kora-reclaim-bot
+    spec:
+      serviceAccountName: kora-bot
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+      containers:
+      - name: bot
+        image: kora-reclaim:latest
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        env:
+        - name: NODE_ENV
+          value: "production"
+        volumeMounts:
+        - name: config
+          mountPath: /config
+          readOnly: true
+        - name: data
+          mountPath: /data
+        - name: logs
+          mountPath: /logs
+        livenessProbe:
+          httpGet:
+            path: /api/metrics
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 60
+        readinessProbe:
+          httpGet:
+            path: /api/metrics
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+      volumes:
+      - name: config
+        secret:
+          secretName: kora-bot-config
+      - name: data
+        persistentVolumeClaim:
+          claimName: kora-bot-data
+      - name: logs
+        persistentVolumeClaim:
+          claimName: kora-bot-logs
+```
+
+Deploy:
+```bash
+kubectl apply -f deployment.yaml
+kubectl logs -f deployment/kora-reclaim-bot -n solana
+```
+
+### Production Monitoring Setup
+
+Monitor these metrics in real-time:
+
+```bash
+# Success rate (should be >90%)
+curl http://localhost:3000/api/metrics | jq '.successRate'
+
+# Recent errors
+curl http://localhost:3000/api/metrics | jq '.recentErrors[-5:]'
+
+# Rent reclaimed today
+curl http://localhost:3000/api/metrics | jq '.totalRentReclaimed'
+
+# RPC errors (should be low)
+curl http://localhost:3000/api/metrics | jq '.rpcErrors'
+
+# Last operation time (should be recent)
+curl http://localhost:3000/api/metrics | jq '.lastOperationTime'
+```
+
+### Daily Operational Tasks
+
+**Every Day:**
+- Check dashboard: http://localhost:3000
+- Review metrics: Success rate, recent errors
+- Check logs: `tail -100 logs/bot.log | grep ERROR`
+- Verify treasury balance: `solana balance <treasury> --keypair <keypair>`
+
+**Every Week:**
+- Review audit log: `wc -l data/audit-log.json`
+- Check idle accounts trending up/down
+- Verify backups are working
+- Test alert system (send test alert)
+
+**Every Month:**
+- Review all transactions for anomalies
+- Rotate keypair (create new keypair, test, migrate)
+- Update documentation with lessons learned
+- Test recovery procedures
+
+### Operational Runbooks
+
+**Bot is down:**
+```bash
+# 1. Check systemd/docker status
+systemctl status kora-bot
+# or docker ps | grep kora
+
+# 2. Check logs for errors
+journalctl -u kora-bot -n 50
+# or docker logs kora-reclaim -n 50
+
+# 3. Restart if needed
+systemctl restart kora-bot
+# or docker restart kora-reclaim
+
+# 4. Alert operations team if still down
+```
+
+**High error rate (>10%):**
+```bash
+# 1. Check RPC endpoint
+curl -X POST https://api.mainnet-beta.solana.com \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"getHealth"}'
+
+# 2. Check recent transactions
+tail -50 logs/bot.log | grep ERROR
+
+# 3. Temporarily disable live reclaims (keep dry-run)
+# Edit config: "dryRun": true, then restart
+
+# 4. Investigate and fix root cause
+```
+
+**Transactions failing:**
+```bash
+# 1. Check SOL balance in treasury
+solana balance <treasury> --keypair <keypair>
+
+# 2. Check RPC rate limits (reduce concurrency)
+# 3. Check for spam/network congestion
+# 4. Review recent transactions for patterns
+```
 
 ---
 

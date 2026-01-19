@@ -1,5 +1,7 @@
 # Getting Started - Solana Kora Rent Reclaim Bot v1.0.0
 
+A quick note from the author: I've kept these steps terse and test-driven. Follow them in order; they were written to get you from zero to a working dashboard in minutes.
+
 **Status**: ✅ Production Ready  
 **All Phases**: 1-11 Complete  
 **Last Updated**: January 19, 2026
@@ -8,15 +10,15 @@
 
 ## What is This?
 
-The **Solana Kora Rent Reclaim Bot** is an automated system that:
+The **Solana Kora Rent Reclaim Bot** is a tool that:
 
 1. **Finds** accounts created via Kora sponsorship with locked SOL
-2. **Analyzes** each account for safety and reclaimability
+2. **Checks** each account for safety
 3. **Reclaims** rent-exempt SOL back to your treasury
-4. **Monitors** operations with real-time dashboard and alerts
-5. **Reports** all actions with complete audit trail
+4. **Watches** operations with a real-time dashboard
+5. **Records** all actions in an audit trail
 
-**Example**: Reclaim 890 SOL from 1,000 idle sponsored accounts in one night.
+**Real example**: Reclaim 890 SOL from 1,000 idle sponsored accounts in a single night.
 
 ---
 
@@ -41,11 +43,11 @@ npm run build
 node dist/cli.js init --output config.json
 ```
 
-Edit `config.json`:
-- Set `rpcUrl` to your Solana endpoint
-- Set `keypairPath` to your keypair location
-- Set `treasuryAddress` to where SOL goes
-- Keep `dryRun: true` for testing
+Edit the `config.json` file:
+- Point `rpcUrl` to your Solana endpoint
+- Set `keypairPath` to where your keypair is
+- Set `treasuryAddress` to where reclaimed SOL goes
+- Keep `dryRun: true` while testing
 
 ### Step 4: Start Dashboard
 ```bash
@@ -146,7 +148,8 @@ node dist/cli.js stats --config config.json
 
 ## Configuration Quick Reference
 
-### Minimal Config
+### Minimal Setup
+Got 5 minutes? Here's the bare minimum config you need:
 ```json
 {
   "rpcUrl": "https://api.devnet.solana.com",
@@ -193,7 +196,9 @@ node dist/cli.js stats --config config.json
 
 ---
 
-## Features by Phase
+## What's Included
+
+Here's what we've built across all phases:
 
 ### Phase 1-8: Core Bot
 - ✅ Account indexing and tracking
@@ -221,6 +226,143 @@ node dist/cli.js stats --config config.json
 - ✅ Advanced alert rules
 - ✅ Performance analytics
 - ✅ Event streaming
+
+---
+
+## Moving to Production
+
+Once you've tested on devnet and testnet, here's how to go live on mainnet:
+
+### Before You Deploy
+
+- [ ] Created a mainnet keypair (store in secure vault, never in git)
+- [ ] Obtained mainnet SOL for fees (a few dollars worth)
+- [ ] Configured private RPC endpoint (not public API)
+- [ ] Set up monitoring/alerting
+- [ ] Tested dry-runs on testnet 3+ times
+- [ ] Reviewed audit logs for any anomalies
+- [ ] Set up log aggregation (Datadog, CloudWatch, ELK)
+- [ ] Tested disaster recovery procedures
+- [ ] Documented runbooks for common issues
+- [ ] Set up on-call rotation
+- [ ] Verified treasury address 5+ times (write it down!)
+
+### Deployment Options
+
+**Option 1: Systemd (Linux/macOS)**
+```bash
+# Create service file at /etc/systemd/system/kora-reclaim-bot.service
+[Unit]
+Description=Kora Rent Reclaim Bot
+After=network.target
+
+[Service]
+Type=simple
+User=solana
+WorkingDirectory=/opt/kora-reclaim-bot
+ExecStart=/usr/bin/node dist/cli.js reclaim --config config.json
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+# Start the service
+sudo systemctl start kora-reclaim-bot
+sudo systemctl enable kora-reclaim-bot
+```
+
+**Option 2: Docker**
+```bash
+# Create Dockerfile
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY dist/ ./dist/
+# Don't copy config.json - mount it instead
+CMD ["node", "dist/cli.js", "reclaim", "--config", "/config/config.json"]
+
+# Build and run
+docker build -t kora-reclaim-bot .
+docker run \
+  -v /secure/config.json:/config/config.json \
+  -v /app/data:/app/data \
+  --restart always \
+  kora-reclaim-bot
+```
+
+**Option 3: Kubernetes**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kora-reclaim-bot
+spec:
+  replicas: 1  # High availability setup
+  selector:
+    matchLabels:
+      app: kora-reclaim-bot
+  template:
+    metadata:
+      labels:
+        app: kora-reclaim-bot
+    spec:
+      containers:
+      - name: bot
+        image: kora-reclaim-bot:latest
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: config
+          mountPath: /config
+          readOnly: true
+        - name: data
+          mountPath: /app/data
+      volumes:
+      - name: config
+        secret:
+          secretName: kora-config
+      - name: data
+        persistentVolumeClaim:
+          claimName: kora-data-pvc
+```
+
+### Production Monitoring Setup
+
+Set up monitoring for:
+- Transaction success rate (target: >95%)
+- Error rate (alert if >1%)
+- RPC endpoint health (monitor response times)
+- Keypair balance (ensure enough for fees)
+- Disk space (audit logs grow over time)
+- Memory usage (should stay <500MB)
+- CPU usage (should stay <20% normally)
+- Network connectivity (especially to RPC)
+
+### Operational Tasks
+
+**Daily:**
+- Check dashboard metrics
+- Review error logs
+- Verify RPC endpoint health
+
+**Weekly:**
+- Review audit logs for anomalies
+- Check transaction fee trends
+- Verify backup completion
+- Test recovery procedures
+
+**Monthly:**
+- Rotate keypair if needed
+- Update security patches
+- Review cost metrics
+- Test full disaster recovery
 
 ---
 
@@ -263,6 +405,15 @@ node dist/cli.js dashboard --config config.json --port 8080
 curl http://localhost:3000/api/metrics | jq
 ```
 
+### Monitor in production
+```bash
+# Stream logs to external service
+tail -f logs/bot.log | nc logs.example.com 514
+
+# Or use a log aggregator
+datadog-agent config set logs_enabled true
+```
+
 ---
 
 ## Safety Features
@@ -276,7 +427,7 @@ curl http://localhost:3000/api/metrics | jq
 
 ### The Bot ALWAYS:
 - ✅ Runs in dry-run mode by default
-- ✅ Logs every decision
+- ✅ Logs every decision (fully auditable)
 - ✅ Validates accounts multiple times
 - ✅ Checks treasury address
 - ✅ Requires explicit approval to go live
@@ -284,6 +435,32 @@ curl http://localhost:3000/api/metrics | jq
 ---
 
 ## Troubleshooting
+
+### Production Issues
+
+**Bot crashes frequently**
+- Check memory usage: `ps aux | grep node`
+- Check error logs: `tail -f logs/error.log`
+- Verify RPC endpoint is responding
+- Check network connectivity to RPC
+
+**Dashboard not updating**
+- Verify bot is running: `ps aux | grep cli.js`
+- Check dashboard logs: `tail -f logs/bot.log | grep dashboard`
+- Verify port is accessible: `curl http://localhost:3000/api/metrics`
+- Check firewall rules
+
+**Transactions failing**
+- Verify keypair has sufficient SOL: `solana balance -k keypair.json`
+- Check treasury address is correct
+- Verify RPC endpoint hasn't rate limited you
+- Check Solana network status (https://status.solana.com)
+
+**High fees**
+- Monitor Solana network congestion
+- Adjust `retryDelayMs` in config
+- Batch reclaims during low-congestion periods
+- Consider alternative RPC endpoints
 
 ### Dashboard won't start
 ```bash

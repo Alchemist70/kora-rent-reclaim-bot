@@ -1,17 +1,16 @@
-# Phase 10: Telegram Alerting System
+# Telegram Alerting System
+
+Short note: Alerts are tuned to reduce noise — they trigger on meaningful events. If you need custom rules, the examples below will help.
+
+**For Production Alert Routing:** See [Production Alert Routing](#production-alert-routing) section below.
 
 ## Overview
 
-The Telegram alerting system sends real-time notifications about important reclaim events to your Telegram chat. This allows operators to monitor the bot remotely and respond to failures or unusual activity immediately.
+The Telegram alerting system sends you alerts when important stuff happens with your bot. Reclaims succeed? You get a ping. Something fails? You know immediately.
 
 ## Features
 
-- **Rent Reclaimed Alerts**: Notification when SOL is successfully reclaimed
-- **Idle Rent Detection**: Warning when accounts with idle rent are detected
-- **Reclaim Failures**: Immediate alert when a reclaim transaction fails
-- **Safety Check Failures**: Warning when accounts fail safety validation
-- **System Errors**: Critical alerts for operational issues
-- **Threshold-based Filtering**: Configure minimum amounts to trigger alerts
+You'll get notified about:
 
 ## Setup
 
@@ -71,6 +70,81 @@ npx ts-node src/cli.ts test-telegram --config config.json
 ```
 
 You should receive a confirmation message in Telegram.
+
+## Production Alert Routing
+
+In production, you'll likely need alerts routed to multiple people/channels and severity-based routing.
+
+### Multi-Channel Setup
+
+Create separate bots for different severity levels:
+
+```json
+{
+  "telegram": {
+    "enabled": true,
+    "channels": {
+      "critical": {
+        "botToken": "critical_bot_token",
+        "chatId": "ops_team_group_id",
+        "includeSeverities": ["ERROR", "CRITICAL"]
+      },
+      "warnings": {
+        "botToken": "warnings_bot_token",
+        "chatId": "team_channel_id",
+        "includeSeverities": ["WARNING", "INFO"]
+      },
+      "debug": {
+        "botToken": "debug_bot_token",
+        "chatId": "debug_channel_id",
+        "includeSeverities": ["DEBUG", "TRACE"]
+      }
+    }
+  }
+}
+```
+
+### Team Group vs. Channel
+
+**Use a Private Group For:**
+- Critical alerts (bot down, high failures)
+- Team discussions and runbooks
+- On-call rotation discussions
+
+**Use a Channel For:**
+- General info (reclaims, metrics)
+- Audit trail (immutable record)
+- Read-only summaries
+
+### Alert Suppression During Maintenance
+
+Create a maintenance mode to prevent alert noise:
+
+```json
+{
+  "telegram": {
+    "maintenance": {
+      "enabled": false,
+      "startTime": "2024-01-20 02:00:00",
+      "endTime": "2024-01-20 03:00:00",
+      "suppressedAlerts": ["INFO", "DEBUG"]
+    }
+  }
+}
+```
+
+### Integration with PagerDuty (Enterprise)
+
+Route critical alerts through PagerDuty:
+
+```bash
+# Use a webhook bridge to convert Telegram alerts to PagerDuty
+# This requires an intermediate service or custom integration
+
+# Option 1: Use AlertManager + PagerDuty integration
+# Option 2: Custom webhook handler that routes to PagerDuty API
+# Option 3: Use Telegram bot that forwards to PagerDuty via webhook
+```
 
 ## Alert Types
 
@@ -450,4 +524,3 @@ The Telegram alerting system provides:
 - ✅ Error handling
 - ✅ Security considerations
 
-For Phase 10 implementation, alerting is optional but highly recommended for production operations.

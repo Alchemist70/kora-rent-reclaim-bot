@@ -1,15 +1,17 @@
 # Solana Rent Explained
 
+A short aside: this is the essential background we assume operators understand. It's short and practical — no academic fluff.
+
 ## What is Rent?
 
-Solana is a blockchain that stores data permanently. Storage costs money—this cost is called **rent**.
+Data on Solana's blockchain costs money to store. That cost is called **rent**.
 
 ### Key Principles
 
-1. **Every account has rent**: All non-system accounts must maintain a minimum SOL balance to remain rent-exempt
-2. **Storage = Cost**: Larger accounts require more SOL locked as rent
-3. **Rent is collected** if an account falls below the minimum
-4. **Rent-exempt = Permanent**: Accounts with sufficient balance never lose rent
+1. **All accounts pay rent** (unless they're exempt). You need a minimum SOL balance to stay exempt
+2. **Bigger accounts need more SOL** locked up as rent
+3. **If you don't have enough**, Solana charges you rent
+4. **Hit the minimum?** Your account becomes permanent. Rent stops.
 
 ## Rent Calculation
 
@@ -43,9 +45,9 @@ Minimum = (82 + 20,480) * 0.00036 * 2 = 14.9 SOL
 
 ### The Problem
 
-Creating an account on Solana requires:
-1. A system transaction (fee: ~5,000 lamports)
-2. A minimum rent-exempt balance
+Creating an account on Solana is pricey:
+1. Transaction fee (~5,000 lamports)
+2. Plus you need that rent-exempt balance
 
 Total cost per account: ~895,000 lamports (~0.009 SOL)
 

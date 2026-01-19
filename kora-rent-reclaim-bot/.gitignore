@@ -60,3 +60,5 @@ coverage/
 # Node
 .node-version
 .npmrc
+
+*.txt

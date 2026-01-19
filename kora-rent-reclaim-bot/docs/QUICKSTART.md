@@ -1,18 +1,26 @@
 # Quick Start Guide
 
-Get the Kora Rent Reclaim Bot running in 10 minutes.
+This guide covers **development setup**. See [GETTING_STARTED.md](../GETTING_STARTED.md) for production deployment.
+
+This quick start is intentionally minimal — follow the steps in order and you'll be running in ten minutes.
 
 ## Prerequisites
 
-- Node.js 16+ installed
+You'll need:
+- Node.js 16 or higher
 - npm or yarn
-- A Solana keypair (JSON format)
-- Devnet SOL (from https://faucet.solana.com)
+- A Solana keypair (JSON file) — **never use production keypair in dev!**
+- Some devnet SOL (grab it from https://faucet.solana.com)
+
+**For Production:**
+- Use a separate keypair stored in a secure vault
+- Use a private RPC endpoint (not public)
+- Set up monitoring and logging
+- See [GETTING_STARTED.md](../GETTING_STARTED.md) for full production checklist
 
 ## Step 1: Clone & Install
 
-```bash
-# Clone the repository
+Get the code and set it up:
 git clone https://github.com/your-org/kora-rent-reclaim-bot.git
 cd kora-rent-reclaim-bot
 
@@ -23,17 +31,9 @@ npm install
 npm run build
 ```
 
-## Step 2: Set Up Configuration
+## Step 2: Configure
 
-```bash
-# Create example config
-npm start -- init
-
-# Edit config.json
-nano config.json
-```
-
-**Minimum required edits:**
+Create and edit your config file:
 
 ```json
 {

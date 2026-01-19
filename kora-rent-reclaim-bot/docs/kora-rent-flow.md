@@ -1,5 +1,7 @@
 # Kora Rent Flow
 
+Heads-up: This walkthrough is from the operator's perspective — what we see, why it's safe to reclaim, and where mistakes happen.
+
 ## How Kora Sponsorship Works
 
 ### 1. Account Creation
@@ -31,11 +33,11 @@ Result:
 
 ### 2. Initial State
 
-**Operator's Perspective:**
+**Here's the situation from the operator's side:**
 ```
 Cost: 890,880 lamports (~0.009 SOL)
-Benefit: User gets account
-ROI: Must be reclaimed or lost forever
+Benefit: User gets an account
+The catch: That SOL either gets reclaimed or it's gone forever
 ```
 
 **On-Chain State:**
