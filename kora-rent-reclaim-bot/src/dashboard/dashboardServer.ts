@@ -217,6 +217,8 @@ export class DashboardServer {
     let totalStillLocked = 0;
     let reclaimableCount = 0;
     let confirmedCount = 0;
+    let skippedCount = 0;
+    let failedCount = 0;
 
     // Calculate from audit log
     for (const entry of auditLog) {
@@ -229,15 +231,27 @@ export class DashboardServer {
       }
     }
 
-    // Count accounts
-    const reclaimableAccounts = indexedAccounts.filter(
-      (acc: any) => !auditLog.some((e: any) => e.account === acc.publicKey && e.action === "RECLAIM_CONFIRMED")
-    );
-    reclaimableCount = reclaimableAccounts.length;
-    totalStillLocked = reclaimableAccounts.reduce((sum: number, acc: any) => sum + (acc.rentLamportsAtCreation || 0), 0);
+    // Count status from latest analysis
+    for (const account of indexedAccounts) {
+      const entries = auditLog.filter((e: any) => e.account === account.publicKey);
+      const lastEntry = entries[entries.length - 1];
 
-    const failedCount = auditLog.filter((e: any) => e.action === "RECLAIM_FAILED").length;
-    const skippedCount = indexedAccounts.length - confirmedCount - failedCount - reclaimableCount;
+      if (lastEntry?.action === "RECLAIM_CONFIRMED") {
+        // Already counted in confirmedCount
+      } else if (lastEntry?.action === "RECLAIM_FAILED") {
+        failedCount++;
+      } else if (lastEntry?.action === "ANALYZED") {
+        if (lastEntry.details?.reclaimable) {
+          reclaimableCount++;
+          totalStillLocked += account.rentLamportsAtCreation || 0;
+        } else {
+          skippedCount++;
+        }
+      } else {
+        // No analysis yet, count as needing analysis
+        skippedCount++;
+      }
+    }
 
     return {
       timestamp: Date.now(),

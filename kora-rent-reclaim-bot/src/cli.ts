@@ -17,6 +17,7 @@ import { PublicKey } from "@solana/web3.js";
 import { loadConfig, createExampleConfig } from "./config.js";
 import { initializeLogger, logInfo, logError, logDebug } from "./utils/logging.js";
 import { getSolanaConnection, loadKeypair, getCurrentSlot } from "./utils/solana.js";
+import { appendToAuditLog } from "./utils/auditLog.js";
 import { SponsoredAccountIndexer } from "./indexer/sponsorshipIndexer.js";
 import { AccountAnalyzer } from "./analyzer/accountAnalyzer.js";
 import { SafetyEngine } from "./safety/safetyEngine.js";
@@ -130,7 +131,7 @@ async function main() {
           // Create safety engine
           const safetyEngine = new SafetyEngine(config);
 
-          // Check safety
+          // Check safety and log results
           let reclaimableCount = 0;
           for (const analysis of analyses) {
             const safetyResult = safetyEngine.checkAccountSafety(analysis);
@@ -138,6 +139,21 @@ async function main() {
               reclaimableCount++;
               console.log(safetyEngine.getSafetyReport(analysis));
             }
+
+            // Log analysis to audit trail
+            appendToAuditLog(
+              config.auditLogPath,
+              "ANALYZED",
+              analysis.publicKey.toString(),
+              {
+                reclaimable: safetyResult.approved,
+                rentLamports: analysis.reclaimableLamports,
+                inactivitySlots: analysis.inactivitySlots,
+                checksPassed: safetyResult.checks.filter((c) => c.passed).length,
+                totalChecks: safetyResult.checks.length,
+                reason: analysis.reason,
+              }
+            );
           }
 
           logInfo(`✓ Analysis complete`, {
@@ -429,7 +445,7 @@ async function main() {
 
     .command(
       "dashboard",
-      "Start the local operator dashboard (read-only web UI)",
+      "Start the local operator dashboard (read-only web UI for monitoring rent reclaim operations)",
       (yargs) =>
         yargs
           .option("config", {
@@ -447,7 +463,29 @@ async function main() {
             describe: "Host to bind to",
             default: "localhost",
             type: "string",
-          }),
+          })
+          .example(
+            "$0 dashboard --config config.json",
+            "Start dashboard on http://localhost:3000"
+          )
+          .example(
+            "$0 dashboard --config config.json --port 8080",
+            "Start dashboard on http://localhost:8080"
+          )
+          .example(
+            "$0 dashboard --config config.json --host 0.0.0.0 --port 3000",
+            "Start dashboard accessible from any IP (use behind firewall only)"
+          )
+          .epilog(
+            "\n📊 DASHBOARD GUIDE:\n" +
+            "  • Metrics Panel - View total tracked, locked, and reclaimed SOL\n" +
+            "  • Accounts Table - See status, rent amount, and reclaim reasons\n" +
+            "  • Timeline Chart - Track all indexed, analyzed, and reclaimed accounts\n" +
+            "  • Audit Log - View complete transaction history\n" +
+            "\n🔐 SECURITY NOTE: Dashboard is intentionally READ-ONLY to prevent accidental fund loss.\n" +
+            "  Execute reclaims via CLI: npm start -- reclaim\n" +
+            "\n📖 For full guide, see: https://github.com/[repo]/docs/DASHBOARD.md\n"
+          ),
       async (argv) => {
         try {
           initializeLogger("debug");

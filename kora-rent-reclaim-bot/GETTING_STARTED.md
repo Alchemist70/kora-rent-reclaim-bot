@@ -69,6 +69,129 @@ node dist/cli.js analyze --config config.json
 
 ---
 
+## Dashboard Guide
+
+The **Dashboard** is a read-only web UI for monitoring rent reclaim operations in real-time.
+
+### Starting the Dashboard
+
+```bash
+# Start dashboard on default port (3000)
+node dist/cli.js dashboard --config config.json
+
+# Or specify a custom port
+node dist/cli.js dashboard --config config.json --port 8080
+
+# Or use npm
+npm start -- dashboard --config config.json
+```
+
+Once running, open **http://localhost:3000** in your browser.
+
+### Dashboard Features
+
+#### 📊 **Metrics Panel** (Top)
+- **Total Tracked** — Total accounts in index
+- **Total Locked** — Sum of all rent amounts (SOL)
+- **Total Reclaimed** — Sum of successfully reclaimed SOL
+- **Still Locked** — SOL in remaining reclaimable accounts
+
+#### 📋 **Accounts Table**
+Shows all indexed accounts with:
+- **Account Address** — Sponsored account public key
+- **Type** — System or Token account
+- **Owner** — Program that owns the account
+- **Status** — `skipped`, `reclaimable`, `reclaimed`, or `failed`
+- **Rent** — Lamports locked in this account
+- **Decision** — Reason for the status (e.g., "Eligible for reclaim")
+- **Reclaimed?** — Whether rent was successfully reclaimed
+
+#### 📈 **Timeline Chart**
+Real-time visualization of account activities:
+- **Indexed** — When accounts were discovered
+- **Analyzed** — When analysis was run
+- **Reclaimed** — When rent was successfully reclaimed
+
+#### 🔐 **Audit Log Summary**
+Summary counts from the audit trail:
+- **Indexed** — Total accounts discovered
+- **Analyzed** — Total accounts analyzed
+- **Reclaimed** — Total successful transactions
+- **Failed** — Total failed reclaims
+
+#### ⚠️ **Warnings Panel**
+Displays system issues (if any):
+- RPC connectivity problems
+- Configuration issues
+- Unusual activity patterns
+
+### Dashboard Workflow
+
+1. **Index accounts** (fills "Total Tracked" and "Indexed" in audit log):
+   ```bash
+   node dist/cli.js index --import accounts-to-track.json
+   ```
+
+2. **Analyze accounts** (updates status to "Analyzed"):
+   ```bash
+   node dist/cli.js analyze
+   ```
+
+3. **Check dashboard** — See which accounts are reclaimable
+
+4. **Execute reclaims** (updates status to "reclaimed"):
+   ```bash
+   node dist/cli.js reclaim
+   ```
+
+5. **Monitor in dashboard** — Watch real-time progress
+
+### Understanding Dashboard Status
+
+| Status | Meaning | Action |
+|--------|---------|--------|
+| `skipped` | Not eligible for reclaim | Review reason, usually "Too recent" or other safety check failure |
+| `reclaimable` | Safe to reclaim but not yet claimed | Run `npm start -- reclaim` to reclaim rent |
+| `reclaimed` | ✅ Successfully reclaimed | Rent returned to treasury |
+| `failed` | ❌ Reclaim transaction failed | Check logs, review reason, may need to retry |
+
+### API Endpoints
+
+The dashboard exposes REST APIs for integration:
+
+```bash
+# Metrics
+curl http://localhost:3000/api/metrics
+
+# Accounts list
+curl http://localhost:3000/api/accounts
+
+# Timeline events
+curl http://localhost:3000/api/timeline
+
+# System warnings
+curl http://localhost:3000/api/warnings
+
+# Audit log summary
+curl http://localhost:3000/api/audit-summary
+```
+
+### Dashboard is Read-Only by Design
+
+The dashboard **intentionally cannot execute transactions**. This is a safety feature:
+
+- ✅ **Dashboard**: Analyze, report, and recommend actions
+- ✅ **CLI**: Execute all transactions (explicit operator consent)
+
+This prevents accidental fund loss from UI misclicks and ensures all transactions are auditable via CLI.
+
+To execute reclaims, use the CLI:
+```bash
+node dist/cli.js reclaim --config config.json
+```
+
+---
+
 ## Configuration Files
 
 Three config templates are provided:

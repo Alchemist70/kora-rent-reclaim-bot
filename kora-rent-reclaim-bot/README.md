@@ -7,6 +7,7 @@
 ## 📖 Quick Links
 
 - **New here?** → [GETTING_STARTED.md](./GETTING_STARTED.md) (5-minute setup)
+- **Dashboard guide** → [docs/DASHBOARD_GUIDE.md](./docs/DASHBOARD_GUIDE.md) (monitoring web UI)
 - **Deploying to production?** → [PRODUCTION_DEPLOYMENT.md](./PRODUCTION_DEPLOYMENT.md)
 - **All documentation** → [DOCUMENTATION.md](./DOCUMENTATION.md)
 - **Testing procedures** → [TESTING_AND_REALTIME_OPS.md](./TESTING_AND_REALTIME_OPS.md)

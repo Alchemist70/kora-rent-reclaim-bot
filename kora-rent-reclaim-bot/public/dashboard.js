@@ -341,12 +341,12 @@ function updateAuditSummary(summary) {
     const container = document.getElementById('audit-summary');
     
     const items = [
-        { label: 'Indexed', key: 'indexed' },
-        { label: 'Analyzed', key: 'analyzed' },
-        { label: 'Approved', key: 'approved' },
-        { label: 'Reclaimed', key: 'reclaimed' },
-        { label: 'Skipped', key: 'skipped' },
-        { label: 'Failed', key: 'failed' }
+        { label: 'Indexed', key: 'INDEXED' },
+        { label: 'Analyzed', key: 'ANALYZED' },
+        { label: 'Approved', key: 'APPROVED' },
+        { label: 'Reclaimed', key: 'RECLAIM_CONFIRMED' },
+        { label: 'Skipped', key: 'SKIPPED' },
+        { label: 'Failed', key: 'RECLAIM_FAILED' }
     ];
 
     container.innerHTML = items.map(item => `
