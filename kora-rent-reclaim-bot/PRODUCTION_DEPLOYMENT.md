@@ -448,7 +448,7 @@ See documentation:
 - [README.md](../README.md) — Overview and architecture
 - [GETTING_STARTED.md](../GETTING_STARTED.md) — Setup guide
 - [TESTING_AND_REALTIME_OPS.md](../TESTING_AND_REALTIME_OPS.md) — Testing procedures
-- [TELEGRAM_ALERTING_IMPLEMENTATION.md](../TELEGRAM_ALERTING_IMPLEMENTATION.md) — Alert configuration
+- [TELEGRAM_ALERTING.md](../docs/ALERTING.md) — Alert configuration
 
 ## Compliance & Audit
 
