@@ -13,25 +13,57 @@
         <header class="header">
             <h1>🤖 Kora Rent Reclaim Dashboard</h1>
             <p class="subtitle">Real-time monitoring of sponsored account reclamation</p>
+            <div class="read-only-badge">
+                <strong>🔒 READ-ONLY BY DESIGN</strong> — Dashboard monitors and reports. CLI executes all transactions.
+            </div>
         </header>
+
+        <!-- Read-Only Justification Panel -->
+        <section class="design-rationale">
+            <div class="rationale-content">
+                <h3>Why This Dashboard Is Read-Only</h3>
+                <div class="rationale-grid">
+                    <div class="rationale-card">
+                        <strong>🛡️ Prevents Accidents</strong>
+                        <p>No fund movements from the UI. Only CLI commands that you review and approve.</p>
+                    </div>
+                    <div class="rationale-card">
+                        <strong>📋 Full Auditability</strong>
+                        <p>Every reclaim action is logged to audit-log.json with explicit operator consent via CLI.</p>
+                    </div>
+                    <div class="rationale-card">
+                        <strong>🔀 Clear Separation</strong>
+                        <p>Dashboard = monitoring & reporting. CLI = execution. No confusion about intent.</p>
+                    </div>
+                    <div class="rationale-card">
+                        <strong>⚡ Intentional Actions</strong>
+                        <p>Operators must manually type CLI commands. This ensures deliberate, not accidental, fund transfers.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <!-- Metrics Summary -->
         <section class="metrics-section">
             <div class="metric-card">
                 <div class="metric-label">Total Accounts Tracked</div>
-                <div class="metric-value" id="total-tracked">--</div>
+                <div class="metric-value" id="total-tracked">0</div>
+                <div class="metric-help">Accounts created via Kora sponsorship</div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Total Rent Locked</div>
-                <div class="metric-value" id="total-locked">-- SOL</div>
+                <div class="metric-value" id="total-locked">0.00 SOL</div>
+                <div class="metric-help">SOL reserved for rent exemption</div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Total Reclaimed</div>
-                <div class="metric-value metric-success" id="total-reclaimed">-- SOL</div>
+                <div class="metric-value metric-success" id="total-reclaimed">0.00 SOL</div>
+                <div class="metric-help">Successfully returned to treasury</div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Still Idle</div>
-                <div class="metric-value metric-warning" id="still-idle">-- SOL</div>
+                <div class="metric-value metric-warning" id="still-idle">0.00 SOL</div>
+                <div class="metric-help">Available for recovery</div>
             </div>
         </section>
 
@@ -65,30 +97,46 @@
 
             <!-- Timeline Tab -->
             <div id="timeline" class="tab-content active">
-                <div class="chart-container">
-                    <canvas id="timelineChart"></canvas>
+                <div class="tab-description">
+                    <p>📊 Reclaim events over the last 30 days. Each data point shows accounts reclaimed on that day.</p>
+                </div>
+                <div class="chart-container" id="timelineContainer">
+                    <canvas id="timelineChart" style="min-height: 300px;"></canvas>
                 </div>
             </div>
 
             <!-- Accounts Tab -->
             <div id="accounts" class="tab-content">
+                <div class="tab-description">
+                    <p>📋 All tracked accounts with their status, owner program, and reclaim history.</p>
+                </div>
+                <div class="safety-info-panel">
+                    <strong>ℹ️ How to Reclaim:</strong>
+                    <p>Select accounts above and use the CLI to execute reclaims safely:</p>
+                    <code>node dist/cli.js reclaim --dry-run true --config config.json</code>
+                    <p style="font-size: 0.85em; margin-top: 8px; color: #666;">
+                        First do a <strong>dry-run</strong> to preview actions, then execute live with <code>--dry-run false</code>
+                    </p>
+                </div>
                 <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="Search account...">
+                    <input type="text" id="searchInput" placeholder="Search by account address, owner, or status...">
+                    <span class="search-hint" id="searchHint"></span>
                 </div>
                 <div class="table-container">
                     <table id="accountsTable" class="accounts-table">
                         <thead>
                             <tr>
-                                <th>Account</th>
+                                <th>Account Address</th>
                                 <th>Type</th>
+                                <th>Owner Program</th>
                                 <th>Status</th>
                                 <th>Rent (SOL)</th>
-                                <th>Reason</th>
-                                <th>Tx Signature</th>
+                                <th>Decision</th>
+                                <th>Reclaimed</th>
                             </tr>
                         </thead>
                         <tbody id="accountsTableBody">
-                            <tr><td colspan="6">Loading...</td></tr>
+                            <tr><td colspan="7" class="loading-cell">Loading account data...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -96,8 +144,11 @@
 
             <!-- Warnings Tab -->
             <div id="warnings" class="tab-content">
+                <div class="tab-description">
+                    <p>⚠️ Operational risks, safety decisions, and system state alerts.</p>
+                </div>
                 <div id="warningsList" class="warnings-list">
-                    <p>Loading warnings...</p>
+                    <div class="loading-cell">Loading operational status...</div>
                 </div>
             </div>
         </section>
@@ -112,8 +163,26 @@
 
         <!-- Footer -->
         <footer class="footer">
-            <p>Last updated: <span id="lastUpdated">--</span></p>
-            <p>Dashboard is read-only. For transactions, use CLI.</p>
+            <div class="footer-content">
+                <div class="footer-section">
+                    <strong>📊 Data Source</strong>
+                    <p>Real-time metrics from audit-log.json and indexed accounts. Reads current Solana state via RPC.</p>
+                </div>
+                <div class="footer-section">
+                    <strong>🔒 Read-Only Design</strong>
+                    <p>This dashboard is <strong>intentionally read-only</strong> to prevent accidental fund loss. All reclaim transactions are executed via CLI for safety, auditability, and explicit operator consent.</p>
+                </div>
+                <div class="footer-section">
+                    <strong>💻 Execute Reclaims Via CLI</strong>
+                    <p><code>node dist/cli.js reclaim --dry-run true</code> (preview)</p>
+                    <p><code>node dist/cli.js reclaim --dry-run false</code> (execute)</p>
+                </div>
+                <div class="footer-section">
+                    <strong>⏱️ Status</strong>
+                    <p>Last updated: <span id="lastUpdated">--</span> <span class="status-live">● LIVE</span></p>
+                    <p style="font-size: 0.85em; color: #666; margin-top: 4px;">Refreshes every 5 seconds</p>
+                </div>
+            </div>
         </footer>
     </div>
 

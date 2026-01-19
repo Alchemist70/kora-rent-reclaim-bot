@@ -1,6 +1,20 @@
 /**
  * Dashboard Frontend Logic
- * Handles data fetching from API endpoints, UI updates, and Chart.js visualization
+ * CRITICAL DESIGN DECISION: This dashboard is INTENTIONALLY READ-ONLY
+ * 
+ * Why read-only?
+ * 1. Prevents accidental fund loss from UI interactions
+ * 2. Ensures explicit operator consent via CLI (all actions auditable)
+ * 3. Separates monitoring from execution responsibilities
+ * 4. Requires deliberate, intentional actions for fund transfers
+ * 
+ * Action Handoff:
+ * - Dashboard: Analyze, report, and recommend actions
+ * - CLI: Execute all transactions (npm start -- reclaim)
+ * - This enforces a safety boundary that cannot be bypassed
+ * 
+ * Do NOT add wallet connections or transaction signing to this dashboard.
+ * The CLI tool (src/cli.ts) handles all fund movements.
  */
 
 // Chart instance for timeline
@@ -67,11 +81,17 @@ async function refreshDashboard() {
  * Update metrics cards
  */
 function updateMetrics(metrics) {
+    // Helper to format SOL values
+    const formatSOL = (lamports) => {
+        const sol = lamports / 1e9;
+        return `${sol.toFixed(2)} SOL`;
+    };
+
     const elements = {
-        'tracked-count': metrics.totalTracked,
-        'locked-amount': `${(metrics.totalLockedRent / 1e9).toFixed(2)} SOL`,
-        'reclaimed-amount': `${(metrics.totalReclaimedRent / 1e9).toFixed(2)} SOL`,
-        'idle-count': metrics.idleAccounts
+        'total-tracked': metrics.totalTracked || 0,
+        'total-locked': formatSOL(metrics.totalRentLocked || 0),
+        'total-reclaimed': formatSOL(metrics.totalReclaimedLamports || 0),
+        'still-idle': formatSOL(metrics.totalStillLocked || 0)
     };
 
     for (const [id, value] of Object.entries(elements)) {
@@ -80,6 +100,9 @@ function updateMetrics(metrics) {
             element.textContent = value;
         }
     }
+
+    // Update last refresh timestamp
+    updateLastRefreshed();
 }
 
 /**
@@ -87,10 +110,10 @@ function updateMetrics(metrics) {
  */
 function updateStatus(metrics) {
     const statuses = {
-        'reclaimable-count': metrics.reclaimable,
-        'reclaimed-count': metrics.reclaimed,
-        'skipped-count': metrics.skipped,
-        'failed-count': metrics.failed
+        'count-reclaimable': metrics.reclaimableCount || 0,
+        'count-reclaimed': metrics.confirmedCount || 0,
+        'count-skipped': metrics.skippedCount || 0,
+        'count-failed': metrics.failedCount || 0
     };
 
     for (const [id, value] of Object.entries(statuses)) {
@@ -105,9 +128,22 @@ function updateStatus(metrics) {
  * Update timeline chart with reclaim events
  */
 function updateTimeline(events) {
+    const timelineContainer = document.getElementById('timelineContainer');
+    
+    if (!timelineContainer) {
+        console.error('Timeline container not found');
+        return;
+    }
+
     if (events.length === 0) {
-        document.getElementById('timeline-content').innerHTML = 
-            '<p style="text-align: center; color: #999; padding: 20px;">No events yet</p>';
+        timelineContainer.innerHTML = `
+            <div class="empty-state-inline">
+                <div style="font-size: 2em; margin-bottom: 10px;">📊</div>
+                <h4>No Reclaim Events Yet</h4>
+                <p style="margin: 8px 0; color: #666;">Start the reclaim process to populate this timeline.</p>
+                <code style="background: #f0f0f0; padding: 8px 12px; border-radius: 4px; display: inline-block; margin-top: 8px;">node dist/cli.js reclaim --config config.json</code>
+            </div>
+        `;
         return;
     }
 
@@ -123,13 +159,17 @@ function updateTimeline(events) {
     const byDate = {};
     chartEvents.forEach(event => {
         const date = new Date(event.timestamp).toLocaleDateString();
-        byDate[date] = (byDate[date] || 0) + (event.type === 'reclaimed' ? 1 : 0);
+        byDate[date] = (byDate[date] || 0) + (event.status === 'reclaimed' || event.type === 'reclaimed' ? 1 : 0);
     });
 
     const dates = Object.keys(byDate).sort();
     const counts = dates.map(d => byDate[d]);
 
     const canvas = document.getElementById('timeline-chart');
+    if (!canvas) {
+        console.error('Timeline chart canvas not found');
+        return;
+    }
     
     if (timelineChart) {
         timelineChart.destroy();
@@ -176,50 +216,118 @@ function updateTimeline(events) {
  * Update accounts table
  */
 function updateAccountsTable(accounts) {
-    const tbody = document.getElementById('accounts-tbody');
+    const tbody = document.getElementById('accountsTableBody');
     
-    if (accounts.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: #999;">No accounts indexed yet</td></tr>';
+    if (!tbody) {
+        console.error('Accounts table body not found');
         return;
     }
 
-    // Sort by locked rent descending
-    accounts.sort((a, b) => b.lockedRent - a.lockedRent);
+    if (!accounts || accounts.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 20px;">
+                    <div class="empty-state-inline">
+                        <div style="font-size: 1.5em; margin-bottom: 8px;">📭</div>
+                        <p style="color: #666;">No accounts indexed yet. Start the indexer to discover accounts:</p>
+                        <code style="background: #f0f0f0; padding: 6px 10px; border-radius: 4px; display: inline-block; margin-top: 8px;">node dist/cli.js index --config config.json</code>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
 
-    tbody.innerHTML = accounts.map(account => `
-        <tr>
-            <td><code class="tx-link" title="${account.pubkey}">${account.pubkey.substring(0, 12)}...</code></td>
-            <td>${account.type}</td>
-            <td><code class="tx-link" title="${account.owner || 'N/A'}">${(account.owner || 'N/A').substring(0, 12)}...</code></td>
-            <td><span class="status-badge status-${account.status.toLowerCase()}">${account.status}</span></td>
-            <td>${(account.lockedRent / 1e9).toFixed(4)} SOL</td>
-            <td>${account.reason || '—'}</td>
-            <td>${account.txSignature ? `<code class="tx-link" title="${account.txSignature}">${account.txSignature.substring(0, 12)}...</code>` : '—'}</td>
-        </tr>
-    `).join('');
+    // Helper to format SOL
+    const formatSOL = (lamports) => {
+        const sol = (lamports || 0) / 1e9;
+        return `${sol.toFixed(4)} SOL`;
+    };
+
+    // Helper to truncate address
+    const truncateAddress = (addr) => {
+        return addr ? `${addr.substring(0, 12)}...` : 'N/A';
+    };
+
+    // Helper to get decision icon
+    const getDecisionIcon = (reason) => {
+        if (!reason) return '✓';
+        if (reason.includes('PDA')) return '🔐';
+        if (reason.includes('program')) return '⚙️';
+        if (reason.includes('balance')) return '💰';
+        if (reason.includes('unsafe')) return '⚠️';
+        return '•';
+    };
+
+    // Sort by locked rent descending
+    accounts.sort((a, b) => (b.rentLamports || 0) - (a.rentLamports || 0));
+
+    tbody.innerHTML = accounts.map(account => {
+        const reason = account.reason || account.detail || '—';
+        const decision = reason === '—' ? 'RECLAIMABLE' : reason.substring(0, 20) + (reason.length > 20 ? '...' : '');
+        const reclaimed = account.txSignature ? '✅ YES' : '—';
+        
+        return `
+            <tr>
+                <td><code class="tx-link" title="${account.publicKey || account.pubkey || 'N/A'}">${truncateAddress(account.publicKey || account.pubkey)}</code></td>
+                <td>${account.accountType || account.type || '—'}</td>
+                <td><code class="tx-link" title="${account.owner || 'N/A'}">${truncateAddress(account.owner)}</code></td>
+                <td><span class="status-badge status-${(account.status || '').toLowerCase()}">${account.status || '—'}</span></td>
+                <td>${formatSOL(account.rentLamports)}</td>
+                <td><span class="reason-text" title="${reason}">${getDecisionIcon(reason)} ${decision}</span></td>
+                <td>${reclaimed}</td>
+            </tr>
+        `;
+    }).join('');
 }
 
 /**
  * Update warnings list
  */
 function updateWarnings(warnings) {
-    const container = document.getElementById('warnings-content');
+    const container = document.getElementById('warningsList');
     
-    if (warnings.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">All systems normal ✓</p>';
+    if (!container) {
+        console.error('Warnings container not found');
         return;
     }
 
+    if (!warnings || warnings.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state-inline healthy-state" style="border-left: 4px solid #10b981; padding: 16px;">
+                <div style="font-size: 1.5em; margin-bottom: 8px;">✅</div>
+                <h4 style="color: #10b981; margin: 0;">All Systems Healthy</h4>
+                <p style="color: #666; margin: 8px 0 0 0; font-size: 0.95em;">No operational warnings detected. Dashboard is functioning normally.</p>
+                <p style="color: #999; margin-top: 8px; font-size: 0.85em;">This does not mean all accounts are reclaimable. Run CLI to analyze and find reclaimable accounts.</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Map severity levels to icons, colors, and action guidance
+    const severityMap = {
+        'critical': { icon: '🚨', color: '#dc2626', action: 'Review immediately' },
+        'error': { icon: '⚠️', color: '#ea580c', action: 'Investigate and resolve' },
+        'warning': { icon: '⚡', color: '#f59e0b', action: 'Monitor closely' },
+        'info': { icon: 'ℹ️', color: '#3b82f6', action: 'For your information' },
+        'success': { icon: '✅', color: '#10b981', action: 'Operation successful' }
+    };
+
     container.innerHTML = warnings.map(warning => {
-        const icon = warning.level === 'error' ? '⚠️' : 
-                    warning.level === 'warning' ? '⚡' : 'ℹ️';
+        const level = (warning.level || 'info').toLowerCase();
+        const severity = severityMap[level] || severityMap['info'];
+        const timestamp = new Date(warning.timestamp).toLocaleString();
         
         return `
-            <div class="warning-item ${warning.level}">
-                <div class="warning-icon">${icon}</div>
+            <div class="warning-item warning-${level}" style="border-left-color: ${severity.color}">
+                <div class="warning-icon">${severity.icon}</div>
                 <div class="warning-content">
                     <div class="warning-message">${escapeHtml(warning.message)}</div>
-                    <div class="warning-time">${new Date(warning.timestamp).toLocaleString()}</div>
+                    ${warning.detail ? `<div class="warning-detail">${escapeHtml(warning.detail)}</div>` : ''}
+                    <div class="warning-footer">
+                        <span class="warning-time">${timestamp}</span>
+                        <span class="warning-action">→ ${severity.action}</span>
+                    </div>
                 </div>
             </div>
         `;
