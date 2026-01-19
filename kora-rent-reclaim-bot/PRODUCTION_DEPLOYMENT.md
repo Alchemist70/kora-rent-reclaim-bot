@@ -448,7 +448,7 @@ See documentation:
 - [README.md](../README.md) — Overview and architecture
 - [GETTING_STARTED.md](../GETTING_STARTED.md) — Setup guide
 - [TESTING_AND_REALTIME_OPS.md](../TESTING_AND_REALTIME_OPS.md) — Testing procedures
-- [ALERTING.md](../ALERTING.md) — Telegram Alert configuration
+- [ALERTING.md](kora-rent-reclaim-bot\docs\ALERTING.md) — Telegram Alert configuration
 
 ## Compliance & Audit
 
