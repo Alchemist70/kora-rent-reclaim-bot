@@ -89,7 +89,7 @@ This config uses environment variables (no hardcoded secrets). Key settings for 
 - `minInactivitySlots: 1000000` — ~2.5 days on mainnet
 - `maxRetries: 5` — More resilient to network issues
 
-## Step 3: Test Connection
+## Step 3: Test Connection & Start Bot
 
 Before running live, test everything:
 
@@ -101,6 +101,16 @@ npm start -- test-telegram --config config.prod.json
 # ✓ Telegram connection test successful
 # ✅ Alerts will be sent to your Telegram chat
 ```
+
+### Start Telegram Bot Responder
+
+For production, run the bot as a dedicated background service:
+
+```bash
+npm start -- start-bot --config config.prod.json
+```
+
+This starts the bot listening for commands (`/start`, `/testconnection`, `/status`) without running any other operations. See [Systemd Service](#systemd-service-unit-file) below for running as a service.
 
 ## Step 4: Set Up Monitoring
 
@@ -164,7 +174,12 @@ Type=simple
 User=solana
 WorkingDirectory=/opt/kora-rent-reclaim-bot
 EnvironmentFile=/opt/kora-rent-reclaim-bot/.env
-ExecStart=/usr/bin/npm start -- reclaim --config config.prod.json
+# For Telegram bot responder (recommended):
+ExecStart=/usr/bin/npm start -- start-bot --config config.prod.json
+
+# Or for reclaim with polling:
+# ExecStart=/usr/bin/npm start -- reclaim --config config.prod.json
+
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal

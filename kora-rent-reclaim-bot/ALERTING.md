@@ -229,11 +229,29 @@ Please check logs for details
 
 The alerting system is integrated throughout the bot's operations:
 
-### In CLI Commands
+### CLI Usage
 
+#### Start Bot as Dedicated Telegram Responder
 ```bash
-# Alerts are sent automatically during reclaim operations
+npm start -- start-bot --config config.json
+```
+Starts only Telegram polling to listen for commands: `/start`, `/testconnection`, `/status`
+
+#### Run with Dashboard
+```bash
+npm start -- dashboard --config config.json
+```
+Runs dashboard + Telegram polling simultaneously.
+
+#### Run with Reclaim Flow
+```bash
 npx ts-node src/cli.ts reclaim --config config.json
+```
+Alerts are sent automatically during reclaim operations.
+
+#### Test Telegram Connection
+```bash
+npm start -- test-telegram --config config.json
 ```
 
 ### Programmatic Usage
@@ -250,6 +268,9 @@ const alertService = initializeAlertService({
     idleThreshold: 0.5
   }
 });
+
+// Start polling to respond to commands
+alertService.startPolling();
 
 // Send alert
 await alertService.alertRentReclaimed(
