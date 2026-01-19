@@ -460,6 +460,67 @@ async function main() {
     )
 
     .command(
+      "start-bot",
+      "Start Telegram command responder (polling for /start, /testconnection, /status)",
+      (yargs) =>
+        yargs.option("config", {
+          alias: "c",
+          describe: "Path to config file",
+          default: "config.json",
+          type: "string",
+        }),
+      async (argv) => {
+        try {
+          const config = loadConfig(argv.config as string);
+          initializeLogger(config.logLevel);
+
+          if (!config.telegram || !config.telegram.enabled) {
+            logError("start-bot", "Telegram alerting not enabled in config");
+            console.log("\n❌ Telegram must be enabled in config.json");
+            console.log("   Set telegram.enabled = true and provide botToken and chatId\n");
+            process.exit(1);
+          }
+
+          const alertService = initializeAlertService(config.telegram);
+
+          if (!alertService.isEnabled()) {
+            logError("start-bot", "Telegram config incomplete");
+            console.log("\n❌ Telegram config incomplete. Check:");
+            console.log("  • telegram.botToken is set");
+            console.log("  • telegram.chatId is set\n");
+            process.exit(1);
+          }
+
+          // Start polling
+          alertService.startPolling();
+
+          console.log("\n" + "═".repeat(60));
+          console.log("🤖 SOLANA RENT RECLAIM BOT - TELEGRAM RESPONDER");
+          console.log("═".repeat(60));
+          console.log("\n✅ Bot is now listening for commands:");
+          console.log("   • /start          - Show welcome message");
+          console.log("   • /testconnection - Verify bot connectivity");
+          console.log("   • /status         - Get current bot status");
+          console.log("\n📍 Send commands from your Telegram chat to get responses");
+          console.log("🛑 Press Ctrl+C to stop the bot\n");
+
+          // Keep process alive
+          process.on("SIGINT", () => {
+            console.log("\n\n" + "─".repeat(60));
+            logInfo("start-bot: Shutting down gracefully");
+            alertService.stopPolling();
+            console.log("✓ Bot stopped");
+            console.log("─".repeat(60) + "\n");
+            process.exit(0);
+          });
+        } catch (error) {
+          logError("start-bot", error instanceof Error ? error.message : String(error));
+          process.exit(1);
+        }
+      }
+    )
+
+    .command(
       "schedule",
       "Schedule recurring operations with cron expressions",
       (yargs) =>
@@ -499,6 +560,19 @@ async function main() {
             cron: argv.cron,
             operation: argv.operation,
           });
+
+          // If Telegram configured, start polling so the bot can respond to commands
+          if (config.telegram) {
+            try {
+              const alertService = initializeAlertService(config.telegram);
+              if (alertService.isEnabled()) {
+                alertService.startPolling();
+                logInfo('Telegram polling started (scheduler)');
+              }
+            } catch (e) {
+              logError('schedule', 'Failed to initialize Telegram polling: ' + (e instanceof Error ? e.message : String(e)));
+            }
+          }
 
           const scheduler = new Scheduler({
             enabled: true,
@@ -709,6 +783,19 @@ async function main() {
 
           // Load configuration
           const config = loadConfig(configPath);
+
+          // If Telegram configured, start polling so the bot can respond to commands
+          if (config.telegram) {
+            try {
+              const alertService = initializeAlertService(config.telegram);
+              if (alertService.isEnabled()) {
+                alertService.startPolling();
+                logInfo('Telegram polling started (dashboard)');
+              }
+            } catch (e) {
+              logError('dashboard', 'Failed to initialize Telegram polling: ' + (e instanceof Error ? e.message : String(e)));
+            }
+          }
 
           // Create dashboard server
           const dashboard = new DashboardServer({
